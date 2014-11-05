@@ -19,65 +19,26 @@
 #ifndef _UI_H
 #define _UI_H
 
-#define MODE_ONESHOT	0
-#define MODE_STROBE	1
-#define MODE_MAX	2
-
-#define READY_NO	0
-#define READY_YES	1
-#define READY_MAX	2
-
-#define TRIG_NONE	0
-#define TRIG_CHAN_1	1
-#define TRIG_CHAN_1_NOT	2
-#define TRIG_CHAN_2	3
-#define TRIG_CHAN_2_NOT	4
-#define TRIG_MANUAL	5
-#define TRIG_MAX	6
-
-#define OUT_CH1		0
-#define OUT_CH2		1
-#define OUT_BOTH	2
-#define OUT_MAX		3
-/* XXX alternate (for stobe) and inverted (for camera control) modes */
-
-#define COMBINE_NONE	0
-#define COMBINE_OR	1
-#define COMBINE_AND	2
-#define COMBINE_XOR	3
-#define COMBINE_MAX	4
-/* XXX "then" operator. E.g. "input 1 then input 2" */
-
-#define DUR_MICROSEC	0
-#define DUR_MILLISEC	1
-#define DUR_SEC		2
-#define DUR_MAX		3
-
-#define RATE_MHZ	0
-#define RATE_KHZ	1
-#define RATE_HZ		2
-#define RATE_MILLI_HZ	3
-#define RATE_MAX	4
+/* Per output-config */
+struct dac_config {
+	int midi_ch;			/* MIDI channel assignment */
+	int midi_ev;			/* MIDI event type assignment */
+	int range;			/* Range: full / half / +/- */
+	int offset;			/* Calibration: tuning offset adjust */
+	int scale;			/* Calibration: tuning scale adjust */
+};
 
 /* Main configuration */
 struct config {
-	int mode;
-	int ready;
-	int trigger[2];
-	int combine;
-	int output;
-	int wait, wait_unit;
-	int wait2, wait2_unit;
-	int on, on_unit;
-	/* Strobe */
-	int freq, freq_unit;
-	int len, len_unit;
-	/* Oneshot */
-	int holdoff, holdoff_unit;
+	struct dac_config dac[8];	/* Per-DAC channel configuration */
+	int poly_mode[8];		/* Per-input channel polyphony mode */
 };
 
-/* Display configuration editor. Returns when user selects Ready */
-void config_edit(void);
+/*
+ * Pipe a UI event to the configuration editor. Returns true if the config
+ * was changed .
+ */
+int config_edit(uint8_t type, uint8_t v1, uint8_t v2, uint8_t v3);
 
 /* Reset configuration to default. */
 void reset_config(void);

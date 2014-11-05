@@ -64,7 +64,7 @@ encoder_interrupt(void)
 	};
 	static int pulses = 0;
 
-	_delay_us(50); /* Allow input to settle a bit */
+	_delay_us(10); /* Allow input to settle a bit */
 	code = ((code << 2) & 0xf) |
 	    ((ENC_PIN & (1 << ENC_PIN_A)) ? 0x02 : 0x00) |
 	    ((ENC_PIN & (1 << ENC_PIN_B)) ? 0x01 : 0x00);

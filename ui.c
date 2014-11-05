@@ -30,62 +30,46 @@
 #include "ui.h"
 
 
-struct selection {
-	size_t n;
-	size_t width;
-	const char *labels[];
-};
-
-static const struct selection modes = {
-	MODE_MAX, 7, { "oneshot", "strobe" }
-};
-
-static const struct selection ready = {
-	READY_MAX, 7, { "ready", "*READY*" }
-};
-
-static const struct selection triggers = {
-	TRIG_MAX, 2, { "", "1", "!1", " 2", "!2", "M" }
-};
-
-static const struct selection outputs = {
-	OUT_MAX, 4, { "1", "2", "both" }
-};
-
-static const struct selection combines = {
-	COMBINE_MAX, 1, { "", "|", "&", "^" }
-};
-
-static const struct selection durations = {
-	DUR_MAX, 2, { "\xe4s", "ms", "s " }
-};
-
-static const struct selection rates = {
-	RATE_MAX, 3, { "MHz", "kHz", "Hz ", "mHz" }
-};
-
 static const struct config default_config = {
-	MODE_STROBE,
-	READY_NO,
-	/* Trigger */
-	{ TRIG_MANUAL, TRIG_NONE }, COMBINE_NONE,
-	/* Output */
-	OUT_CH1,
-	/* Delay */
-	100, DUR_MILLISEC,
-	/* 2nd output delay */
-	200, DUR_MILLISEC,
-	/* On duration */
-	1, DUR_MICROSEC,
-	/* Strobe: freq */
-	10, RATE_HZ,
-	/* Strobe: length */
-	10, DUR_SEC,
-	/* Oneshot: holdoff time */
-	2, DUR_SEC,
 };
 
 struct config cfg;
+
+
+struct selection {
+	size_t n;
+	const char *labels[];
+};
+
+static const struct selection poly_mode = {
+	POLY_MODE_MAX, { "last", "first" "lowest", "highest", "random" }
+};
+
+static const struct selection midi_ev = {
+	MIDI_EV_MAX, { "note", "bend" "modwheel", "velocity", "ch.touch" }
+};
+
+static const struct selection dac_range = {
+	DAC_RANGE_MAX, { "full", "half", "+full", "+half", "-full", "-half" }
+};
+
+struct config cfg;
+
+/* Per output-config */
+struct dac_config {
+	int midi_ev;			/* MIDI event type assignment */
+	int midi_ch;			/* MIDI channel assignment */
+	int range;			/* Range: full / half / +/- */
+	int offset;			/* Calibration: tuning offset adjust */
+	int scale;			/* Calibration: tuning scale adjust */
+};
+
+/* Main configuration */
+struct config {
+	struct dac_config dac[8];	/* Per-DAC channel configuration */
+	int poly_mode;			/* Polyphony mode */
+};
+
 
 /* Identifiers for UI inputs */
 enum control_id {

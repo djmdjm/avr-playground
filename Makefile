@@ -1,11 +1,12 @@
-MCU=atmega324pa
-#MCU=at90usb1286
-#MCU=atmega32u4
+#MCU=atmega324pa
+#MCU=at90usb1286	# Teensy 2.0++
+MCU=atmega32u4		# Teensy 2.0
 #CPUFREQ=8000000
-CPUFREQ=20000000
-#LOADER=teensy
+#CPUFREQ=20000000
+CPUFREQ=16000000
+LOADER=teensy
 
-LOADER=avrdude
+#LOADER=avrdude
 AVRDUDE_PORT=/dev/cuaU1
 AVRDUDE_PART=m324pa # m328p m324pa t85 t861 t2313
 AVRDUDE_HW=buspirate
@@ -20,9 +21,9 @@ CFLAGS=-mmcu=${MCU} -DF_CPU=${CPUFREQ}UL ${WARNFLAGS} ${OPT} -std=gnu99
 CFLAGS+=-funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS+=-g
 
-#LIBAVR_OBJS=demux.o rgbled.o num_format.o spi.o ad56x8.o encoder.o event.o
-#LIBAVR_OBJS+=mcp23s1x.o midi.o lcd.o
-LIBAVR_OBJS=num_format.o lcd.o event.o encoder.o ui.o
+LIBAVR_OBJS=spi.o ad56x8.o encoder.o event.o
+LIBAVR_OBJS+=midi.o lcd.o num_format.o
+#LIBAVR_OBJS+=demux.o mcp23s1x.o ui.o rgbled.o
 
 CC=avr-gcc
 OBJCOPY=avr-objcopy
