@@ -1,0 +1,97 @@
+> startup screen; return after timeout
+DJMCV1.0
+SW: 1.00
+
+> encoder activity goes to config editor. Options:
+ EDIT      POLY    RESET      SAVE     UPDATE
+CHANNEL => MODE => CONFIG => CONFIG => FIRMWARE
+
+> SAVE
+SAVE CFG
+........
+
+choice: Y / N
+N => returns
+Y => saves current config
+
+> FIRMWARE
+UPDATE
+........
+
+choice: Y / N
+N => returns
+Y => shows following:
+
+ START
+TRANSFER
+
+and enters USB bootloader mode.
+
+> POLY
+POLYMODE
+........
+
+LAST | FIRST | LOWEST | HIGHEST | RANDOM
+
+store and return on encoder press
+
+> CHANNEL
+CHANNEL
+
+1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | RETURN
+........
+
+> channel editor; options:
+MIDI     MIDI       OUTPUT    TUNING
+EVENT => CHANNEL => RANGE  =>        => RETURN
+
+> midi event
+EVENT
+........
+
+NOTE | BEND | MODWHEEL | VELOCITY | CH.TOUCH
+
+store and return on encoder press
+
+> midi channel
+MIDI CH
+........
+
+1 => 16 | OMNI
+
+store and return on encoder press
+
+> range; skipped if event type == note
+V RANGE
+........
+
+-10->+10 | 0->+10 | -5->5 | 0->+5 | -10->0 | -5->0
+
+store and return on encoder press
+
+> tuning
+TUNING
+........
+
+RESET | OFFSET | SCALE | RETURN
+
+> tuning reset
+RESET
+........
+
+Y | N
+N => returns
+Y => loads default offset/scale from default config
+
+> tuning offset
+
+NB. while editing, DAC outputs 1V, ignores MIDI
+
+OFFSET
+(integer)
+
+store and return on encoder press
+
+> tuning scale
+
+NB. while editing, DAC outputs 10V, ignores MIDI
