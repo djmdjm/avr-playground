@@ -95,9 +95,6 @@ type location struct {
 // defined here, but it is also possible to refer to specific fields
 // using a syntax like $<stringv>1. 
 
-// Error during lexing.
-%token <loc>		_ERROR
-
 // End-of-file.
 %token <loc>		_EOF
 
@@ -169,11 +166,16 @@ menus:
 menu:
 	_MENU _ROOT '{' menu_items '}'
 	{
-		// XXX
+		$$ = menu{name: ""}
+		$$.mergeItems($4)
 	}
 |	_MENU _QUOTED '{' menu_items '}'
 	{
-		// XXX
+		$$ = menu{name: $<stringv>2}
+		err := $$.mergeItems($4)
+		if err != nil {
+			yylex.Error(err.Error())
+		}
 	}
 
 // Menu contents are one or more statements.
@@ -188,15 +190,33 @@ menu_item:
 |	submenu_item		{ $$ = $1 }
 |	_VARIABLE _QUOTED
 	{
-		// XXX
+		$$ = menuItem{
+			miType: menuItemVarInfo,
+			variableInfo: variableInfo{
+				varType: varExplicit,
+				name: $<stringv>2,
+			},
+		}
 	}
 |	_VARIABLE _PREFIX _QUOTED
 	{
-		// XXX
+		$$ = menuItem{
+			miType: menuItemVarInfo,
+			variableInfo: variableInfo{
+				varType: varPrefix,
+				name: $<stringv>3,
+			},
+		}
 	}
 |	_VARIABLE _SUFFIX _QUOTED
 	{
-		// XXX
+		$$ = menuItem{
+			miType: menuItemVarInfo,
+			variableInfo: variableInfo{
+				varType: varSuffix,
+				name: $<stringv>3,
+			},
+		}
 	}
 
 submenu_item:

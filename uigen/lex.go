@@ -4,7 +4,7 @@ package main
 
 import (
 	"fmt"
-//	"log"
+	//	"log"
 	"strconv"
 	"unicode"
 	"unicode/utf8"
@@ -144,9 +144,13 @@ func (st *state) hexByte() int {
 // Lex obtains the next token from the input. It is part of the lexer interface
 // required by the generated parser.
 func (st *state) Lex(yy *yySymType) int {
+	// If an error has occurred already then don't return any more tokens.
+	if st.err != nil {
+		return _EOF
+	}
+
 	// Skip whitespace and comments.
-	done := false
-	for !st.eof() && !done{
+	for !st.eof() {
 		c := st.peek()
 		if c == '#' {
 			// Comment; consume to EOL.
@@ -250,6 +254,7 @@ func (st *state) Lex(yy *yySymType) int {
 	}
 
 	// There are no bare identifiers in this language, so this is an error.
+	st.lexError("unrecognised token %q", yy.token)
 	return _EOF
 }
 
