@@ -4,6 +4,7 @@ menu root {
 	variable prefix "cfg."
 	submenu label "EDIT CHANNEL" definition "channel list"
 	editable "POLY MODE" {
+		display "MODE"
 		variable suffix "poly_mode"
 		option define "POLY_LAST" label "last"
 		option define "POLY_FIRST" label "first"
@@ -12,17 +13,17 @@ menu root {
 		option define "POLY_RANDOM" label "random"
 	}
 	ask "RESET CONFIG" {
-		label "RESET"
+		display "RESET"
 		answer "Y" => call "reset_cfg"
 		answer "N" => return
 	}
 	ask "SAVE CONFIG" {
-		label "SAVE"
+		display "SAVE"
 		answer "Y" => call "save_cfg"
 		answer "N" => return
 	}
 	ask "UPDATE FIRMWARE" {
-		label "BOOTLDR"
+		display "BOOTLDR"
 		answer "Y" => call "update_firmware"
 		answer "N" => return
 	}
@@ -30,11 +31,12 @@ menu root {
 
 menu "channel list" {
 	variable suffix "channel"
-	submenu index min 1 max 8 offset -1 definition "channel"
+	submenu index min 1 max 8 offset -1 label "CHANNEL" definition "channel"
 }
 
 menu "channel" {
 	editable "MIDI EVENT" {
+		display "EV. TYPE"
 		variable suffix "midi_event_type"
 		option define "CH_EVENT_NOTE" label "note"
 		option define "CH_EVENT_BEND" label "bender"
@@ -43,11 +45,13 @@ menu "channel" {
 		option define "CH_EVENT_CHANNEL_TOUCH" label "ch.touch"
 	}
 	editable "MIDI CHANNEL" {
+		display "MIDI CH"
 		variable suffix "midi_channel"
 		integer range 1 to 16
 		option define "MIDI_OMNI" label "omni"
 	}
 	editable "OUTPUT RANGE" {
+		display "RANGE"
 		variable suffix "output_range"
 		option define "CH_RANGE_FULL" label "-10>+10"
 		option define "CH_RANGE_HALF" label "-5>+5"
@@ -61,15 +65,17 @@ menu "channel" {
 
 menu "TUNING" {
 	ask "RESET TUNING" {
-		label "RESET"
+		display "RESET"
 		answer "Y" => call "reset_tune"
 		answer "N" => return
 	}
 	editable "OFFSET" {
+		display "OFFSET"
 		variable suffix "offset"
 		integer range -32768 to 32767
 	}
 	editable "SCALE" {
+		display "SCALE"
 		variable suffix "offset"
 		integer range -32768 to 32767
 	}

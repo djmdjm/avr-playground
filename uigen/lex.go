@@ -10,7 +10,8 @@ import (
 	"unicode/utf8"
 )
 
-// state holds the text being parsed and lexer/parser state.
+// state holds the lexer state (including the text being processed) and the
+// resultant parse tree.
 type state struct {
 	// Lexing state.
 	err       error    // lex/parse error; usually nil.
@@ -52,7 +53,10 @@ func (err *ParseError) Error() string {
 // Error records a parse error. It is part of the lexer interface
 // required by the generated parser.
 func (st *state) Error(msg string) {
-	st.err = &ParseError{msg: msg, loc: st.loc}
+	// Only record first error.
+	if st.err == nil {
+		st.err = &ParseError{msg: msg, loc: st.loc}
+	}
 }
 
 // has checks whether the input has at least 'n' characters left.

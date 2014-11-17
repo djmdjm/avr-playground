@@ -41,6 +41,7 @@ var keywords = map[string]int{
 	"call":       _CALL,
 	"define":     _DEFINE,
 	"definition": _DEFINITION,
+	"display":    _DISPLAY,
 	"editable":   _EDITABLE,
 	"index":      _INDEX,
 	"integer":    _INTEGER,
@@ -108,6 +109,7 @@ type location struct {
 %token <loc>		_CALL
 %token <loc>		_DEFINE
 %token <loc>		_DEFINITION
+%token <loc>		_DISPLAY
 %token <loc>		_EDITABLE
 %token <loc>		_INDEX
 %token <loc>		_INTEGER
@@ -142,13 +144,13 @@ type location struct {
 %type <editableStatements>	editable_statements
 %type <editableStatement>	editable_statement
 
-// Operator precedence. We don't really have any operators though.
-
-%left			_QUOTED _FLOAT _INT
+// No need to define %left/%right operator precedence, since we don't have
+// any operators.
 
 %%
 
-// Grammar.
+// Grammar. We do little processing here - mostly just generating a syntax
+// tree.
 
 // Whole file.
 file:
@@ -161,20 +163,37 @@ file:
 // Top level of the file consists of one or more "menu" statements.
 menus:
      	menu			{ $$ = []menu{$1} }
-|	menus menu		{ $$ = append($1, $2) }
+|	menus menu
+	{
+		for _, menu := range $1 {
+			if menu.name == $2.name {
+				yylex.Error("duplicate menu name")
+				break
+			}
+		}
+		$$ = append($1, $2)
+	}
 
 menu:
 	_MENU _ROOT '{' menu_items '}'
 	{
 		$$ = menu{name: ""}
-		$$.mergeItems($4)
-	}
-|	_MENU _QUOTED '{' menu_items '}'
-	{
-		$$ = menu{name: $<stringv>2}
 		err := $$.mergeItems($4)
 		if err != nil {
 			yylex.Error(err.Error())
+		}
+	}
+|	_MENU _QUOTED '{' menu_items '}'
+	{
+		menuName := $<stringv>2
+		if menuName == "" {
+			yylex.Error("empty menu name")
+		} else {
+			$$ = menu{name: menuName}
+			err := $$.mergeItems($4)
+			if err != nil {
+				yylex.Error(err.Error())
+			}
 		}
 	}
 
@@ -191,7 +210,7 @@ menu_item:
 |	_VARIABLE _QUOTED
 	{
 		$$ = menuItem{
-			miType: menuItemVarInfo,
+			miType: miVariable,
 			variableInfo: variableInfo{
 				varType: varExplicit,
 				name: $<stringv>2,
@@ -201,7 +220,7 @@ menu_item:
 |	_VARIABLE _PREFIX _QUOTED
 	{
 		$$ = menuItem{
-			miType: menuItemVarInfo,
+			miType: miVariable,
 			variableInfo: variableInfo{
 				varType: varPrefix,
 				name: $<stringv>3,
@@ -211,7 +230,7 @@ menu_item:
 |	_VARIABLE _SUFFIX _QUOTED
 	{
 		$$ = menuItem{
-			miType: menuItemVarInfo,
+			miType: miVariable,
 			variableInfo: variableInfo{
 				varType: varSuffix,
 				name: $<stringv>3,
@@ -222,21 +241,55 @@ menu_item:
 submenu_item:
 	_SUBMENU _LABEL _QUOTED
 	{
-		// XXX
+		$$ = menuItem{
+			miType: miSubmenu,
+			label: $<stringv>3,
+			definition: $<stringv>3,
+		}
 	}
 |	_SUBMENU _LABEL _QUOTED _DEFINITION _QUOTED
 	{
-		// XXX
+		$$ = menuItem{
+			miType: miSubmenu,
+			label: $<stringv>3,
+			definition: $<stringv>5,
+		}
 	}
-|	_SUBMENU _INDEX _MIN _INT _MAX _INT _OFFSET _INT _DEFINITION _QUOTED
+|	_SUBMENU _INDEX _MIN _INT _MAX _INT _OFFSET _INT _LABEL _QUOTED _DEFINITION _QUOTED
 	{
-		// XXX
+		$$ = menuItem{
+			miType: miSubmenuIntRange,
+			label: $<stringv>10,
+			definition: $<stringv>12,
+			intRange: intRange{
+				lo: $<intv>4,
+				hi: $<intv>6,
+				offset: $<intv>8,
+			},
+		}
+	}
+|	_SUBMENU _INDEX _MIN _INT _MAX _INT _OFFSET _INT _LABEL _QUOTED
+	{
+		$$ = menuItem{
+			miType: miSubmenuIntRange,
+			label: $<stringv>10,
+			definition: $<stringv>10,
+			intRange: intRange{
+				lo: $<intv>4,
+				hi: $<intv>6,
+				offset: $<intv>8,
+			},
+		}
 	}
 
 ask_item:
 	_ASK _QUOTED '{' ask_statements '}'
 	{
-		// XXX
+		$$ = menuItem{miType: miAsk, label: $<stringv>2}
+		err := $$.mergeAsk($4)
+		if err != nil {
+			yylex.Error(err.Error())
+		}
 	}
 
 ask_statements:
@@ -244,23 +297,44 @@ ask_statements:
 |	ask_statements ask_statement	{ $$ = append($1, $2) }
 
 ask_statement:
-	_LABEL _QUOTED
+	_DISPLAY _QUOTED
 	{
-		// XXX
+		$$ = askStatement{asType: askDisplay, label: $<stringv>2}
 	}
 |	_ANSWER _QUOTED _THEN _CALL _QUOTED
 	{
-		// XXX
+		answer := $<stringv>2
+		action := $<stringv>5
+		if answer == "" || action == "" {
+			yylex.Error("invalid answer argument")
+		}
+		$$ = askStatement{
+			asType: askAnswer,
+			label: answer,
+			action: action,
+		}
 	}
 |	_ANSWER _QUOTED _THEN _RETURN
 	{
-		// XXX
+		answer := $<stringv>2
+		if answer == "" {
+			yylex.Error("invalid answer argument")
+		}
+		$$ = askStatement{
+			asType: askAnswer,
+			label: answer,
+			action: "",
+		}
 	}
 
 editable_item:
 	_EDITABLE _QUOTED '{' editable_statements '}'
 	{
-		// XXX
+		$$ = menuItem{miType: miEditable, label: $<stringv>2}
+		err := $$.mergeEditable($4)
+		if err != nil {
+			yylex.Error(err.Error())
+		}
 	}
 
 editable_statements:
@@ -268,21 +342,57 @@ editable_statements:
 |	editable_statements editable_statement	{ $$ = append($1, $2) }
 
 editable_statement:
-	_OPTION _DEFINE _QUOTED _LABEL _QUOTED
+	_DISPLAY _QUOTED {
+		$$ = editableStatement{esType: esDisplay, label: $<stringv>2}
+	}
+|	_OPTION _DEFINE _QUOTED _LABEL _QUOTED
 	{
-		// XXX
+		$$ = editableStatement{
+			esType: esOption,
+			definition: $<stringv>3,
+			label: $<stringv>5,
+		}
 	}
 |	_INTEGER _RANGE _INT _TO _INT
 	{
-		// XXX
+		$$ = editableStatement{
+			esType: esIntRange,
+			intRange: intRange{
+				lo: $<intv>3,
+				hi: $<intv>5,
+			},
+		}
+	}
+|	_INTEGER _RANGE _INT _TO _INT _OFFSET _INT
+	{
+		$$ = editableStatement{
+			esType: esIntRange,
+			intRange: intRange{
+				lo: $<intv>3,
+				hi: $<intv>5,
+				offset: $<intv>7,
+			},
+		}
 	}
 |	_VARIABLE _QUOTED
 	{
-		// XXX
+		$$ = editableStatement{
+			esType: esVariable,
+			variableInfo: variableInfo{
+				varType: varExplicit,
+				name: $<stringv>2,
+			},
+		}
 	}
 |	_VARIABLE _SUFFIX _QUOTED
 	{
-		// XXX
+		$$ = editableStatement{
+			esType: esVariable,
+			variableInfo: variableInfo{
+				varType: varSuffix,
+				name: $<stringv>3,
+			},
+		}
 	}
 
 %%
