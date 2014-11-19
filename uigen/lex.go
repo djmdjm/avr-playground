@@ -32,7 +32,7 @@ type LexError struct {
 }
 
 func (err *LexError) Error() string {
-	return fmt.Sprintf("%v:%v: lex error: %s", err.loc.line, err.loc.char, err.msg)
+	return fmt.Sprintf("%v: lex error: %s", err.loc, err.msg)
 }
 
 // lexError records a lexing error.
@@ -47,7 +47,7 @@ type ParseError struct {
 }
 
 func (err *ParseError) Error() string {
-	return fmt.Sprintf("%v:%v: parse error: %s", err.loc.line, err.loc.char, err.msg)
+	return fmt.Sprintf("%v: parse error: %s", err.loc, err.msg)
 }
 
 // Error records a parse error. It is part of the lexer interface

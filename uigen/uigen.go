@@ -8,74 +8,6 @@ import (
 	"os"
 )
 
-type variableInfoType int
-type menuItemType int
-type askStatementType int
-type editableStatementType int
-
-const (
-	// Types for variableInfo.
-	varUnspecified = variableInfoType(0)
-	varPrefix      = iota
-	varSuffix      = iota
-	varExplicit    = iota
-	// Types for menuItems.
-	miVariable        = menuItemType(1)
-	miSubmenu         = iota
-	miSubmenuIntRange = iota
-	miAsk             = iota
-	miEditable        = iota
-	// Types for askStatement
-	askDisplay = askStatementType(1)
-	askAnswer  = iota
-	// Types for editableStatement
-	esDisplay  = editableStatementType(1)
-	esOption   = iota
-	esIntRange = iota
-	esVariable = iota
-)
-
-type variableInfo struct {
-	varType variableInfoType
-	name    string
-}
-
-type menu struct {
-	name         string
-	variableInfo variableInfo
-	menuItems    []menuItem
-}
-
-type intRange struct {
-	lo, hi, offset int64
-}
-
-type askStatement struct {
-	asType askStatementType
-	label  string
-	action string
-}
-
-type editableStatement struct {
-	esType       editableStatementType
-	label        string
-	definition   string
-	intRange     intRange
-	variableInfo variableInfo
-}
-
-type menuItem struct {
-	miType       menuItemType
-	variableInfo variableInfo        // For miVariable
-	label        string              // For all but miVariable.
-	display      string              // For all but miVariable.
-	definition   string              // For miSubmenu and miSubmenuIntRange
-	intRange     intRange            // For miSubmenuIntRange
-	asks         []askStatement      // For miAsk
-	options      []editableStatement // For miEditable
-
-}
-
 func (m *menu) mergeItems(items []menuItem) error {
 	for _, item := range items {
 		if item.miType == miVariable {
@@ -165,6 +97,35 @@ func (mi *menuItem) mergeEditable(statements []editableStatement) error {
 	return nil
 }
 
+func checkMenus(menuList []menu) error {
+	menus := map[string]*menu{}
+	for i := range menuList {
+		if menus[menuList[i].name] != nil {
+			return fmt.Errorf("%v: duplicate menu %q, first instance at %v", menuList[i].loc, menuList[i].name, menus[menuList[i].name].loc)
+		}
+		menus[menuList[i].name] = &menuList[i]
+	}
+	// Check for missing submenus and ones that are unused.
+	visited := map[string]bool{}
+	for _, menu := range menus {
+		for _, menuItem := range menu.menuItems {
+			if menuItem.miType != miSubmenu && menuItem.miType != miSubmenuIntRange {
+				continue
+			}
+			if menus[menuItem.definition] == nil {
+				return fmt.Errorf("%v: missing menu %q", flag.Arg(0), menuItem.loc, menuItem.definition)
+			}
+			visited[menuItem.definition] = true
+		}
+	}
+	for name, menu := range menus {
+		if name != "" && !visited[name] {
+			return fmt.Errorf("%v: menu %q not referenced", menu.loc, name)
+		}
+	}
+	return nil
+}
+
 func main() {
 	flag.Parse()
 	if flag.NArg() != 1 {
@@ -181,7 +142,11 @@ func main() {
 	f.Close()
 	menus, err := parse(text)
 	if err != nil {
-		log.Fatalf("parse %q: %v", flag.Arg(0), err)
+		log.Fatalf("parse %v:%v", flag.Arg(0), err)
+	}
+	err = checkMenus(menus)
+	if err != nil {
+		log.Fatalf("check %v:%v", flag.Arg(0), err)
 	}
 	fmt.Printf("%#v\n", menus)
 }

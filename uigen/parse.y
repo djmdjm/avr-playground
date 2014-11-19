@@ -34,6 +34,10 @@
 %{
 package main
 
+import (
+	"fmt"
+)
+
 // keywords holds the language keywords and their symbolic values.
 var keywords = map[string]int{
 	"answer":     _ANSWER,
@@ -165,19 +169,13 @@ menus:
      	menu			{ $$ = []menu{$1} }
 |	menus menu
 	{
-		for _, menu := range $1 {
-			if menu.name == $2.name {
-				yylex.Error("duplicate menu name")
-				break
-			}
-		}
 		$$ = append($1, $2)
 	}
 
 menu:
 	_MENU _ROOT '{' menu_items '}'
 	{
-		$$ = menu{name: ""}
+		$$ = menu{loc: $1, name: ""}
 		err := $$.mergeItems($4)
 		if err != nil {
 			yylex.Error(err.Error())
@@ -189,7 +187,7 @@ menu:
 		if menuName == "" {
 			yylex.Error("empty menu name")
 		} else {
-			$$ = menu{name: menuName}
+			$$ = menu{loc: $1, name: menuName}
 			err := $$.mergeItems($4)
 			if err != nil {
 				yylex.Error(err.Error())
@@ -210,6 +208,7 @@ menu_item:
 |	_VARIABLE _QUOTED
 	{
 		$$ = menuItem{
+			loc: $1,
 			miType: miVariable,
 			variableInfo: variableInfo{
 				varType: varExplicit,
@@ -220,6 +219,7 @@ menu_item:
 |	_VARIABLE _PREFIX _QUOTED
 	{
 		$$ = menuItem{
+			loc: $1,
 			miType: miVariable,
 			variableInfo: variableInfo{
 				varType: varPrefix,
@@ -230,6 +230,7 @@ menu_item:
 |	_VARIABLE _SUFFIX _QUOTED
 	{
 		$$ = menuItem{
+			loc: $1,
 			miType: miVariable,
 			variableInfo: variableInfo{
 				varType: varSuffix,
@@ -242,6 +243,7 @@ submenu_item:
 	_SUBMENU _LABEL _QUOTED
 	{
 		$$ = menuItem{
+			loc: $1,
 			miType: miSubmenu,
 			label: $<stringv>3,
 			definition: $<stringv>3,
@@ -250,6 +252,7 @@ submenu_item:
 |	_SUBMENU _LABEL _QUOTED _DEFINITION _QUOTED
 	{
 		$$ = menuItem{
+			loc: $1,
 			miType: miSubmenu,
 			label: $<stringv>3,
 			definition: $<stringv>5,
@@ -258,6 +261,7 @@ submenu_item:
 |	_SUBMENU _INDEX _MIN _INT _MAX _INT _OFFSET _INT _LABEL _QUOTED _DEFINITION _QUOTED
 	{
 		$$ = menuItem{
+			loc: $1,
 			miType: miSubmenuIntRange,
 			label: $<stringv>10,
 			definition: $<stringv>12,
@@ -271,6 +275,7 @@ submenu_item:
 |	_SUBMENU _INDEX _MIN _INT _MAX _INT _OFFSET _INT _LABEL _QUOTED
 	{
 		$$ = menuItem{
+			loc: $1,
 			miType: miSubmenuIntRange,
 			label: $<stringv>10,
 			definition: $<stringv>10,
@@ -285,7 +290,7 @@ submenu_item:
 ask_item:
 	_ASK _QUOTED '{' ask_statements '}'
 	{
-		$$ = menuItem{miType: miAsk, label: $<stringv>2}
+		$$ = menuItem{loc: $1, miType: miAsk, label: $<stringv>2}
 		err := $$.mergeAsk($4)
 		if err != nil {
 			yylex.Error(err.Error())
@@ -299,7 +304,11 @@ ask_statements:
 ask_statement:
 	_DISPLAY _QUOTED
 	{
-		$$ = askStatement{asType: askDisplay, label: $<stringv>2}
+		$$ = askStatement{
+			loc: $1,
+			asType: askDisplay,
+			label: $<stringv>2,
+		}
 	}
 |	_ANSWER _QUOTED _THEN _CALL _QUOTED
 	{
@@ -309,6 +318,7 @@ ask_statement:
 			yylex.Error("invalid answer argument")
 		}
 		$$ = askStatement{
+			loc: $1,
 			asType: askAnswer,
 			label: answer,
 			action: action,
@@ -321,6 +331,7 @@ ask_statement:
 			yylex.Error("invalid answer argument")
 		}
 		$$ = askStatement{
+			loc: $1,
 			asType: askAnswer,
 			label: answer,
 			action: "",
@@ -343,11 +354,16 @@ editable_statements:
 
 editable_statement:
 	_DISPLAY _QUOTED {
-		$$ = editableStatement{esType: esDisplay, label: $<stringv>2}
+		$$ = editableStatement{
+			loc: $1,
+			esType: esDisplay,
+			label: $<stringv>2,
+		}
 	}
 |	_OPTION _DEFINE _QUOTED _LABEL _QUOTED
 	{
 		$$ = editableStatement{
+			loc: $1,
 			esType: esOption,
 			definition: $<stringv>3,
 			label: $<stringv>5,
@@ -356,6 +372,7 @@ editable_statement:
 |	_INTEGER _RANGE _INT _TO _INT
 	{
 		$$ = editableStatement{
+			loc: $1,
 			esType: esIntRange,
 			intRange: intRange{
 				lo: $<intv>3,
@@ -366,6 +383,7 @@ editable_statement:
 |	_INTEGER _RANGE _INT _TO _INT _OFFSET _INT
 	{
 		$$ = editableStatement{
+			loc: $1,
 			esType: esIntRange,
 			intRange: intRange{
 				lo: $<intv>3,
@@ -377,6 +395,7 @@ editable_statement:
 |	_VARIABLE _QUOTED
 	{
 		$$ = editableStatement{
+			loc: $1,
 			esType: esVariable,
 			variableInfo: variableInfo{
 				varType: varExplicit,
@@ -387,6 +406,7 @@ editable_statement:
 |	_VARIABLE _SUFFIX _QUOTED
 	{
 		$$ = editableStatement{
+			loc: $1,
 			esType: esVariable,
 			variableInfo: variableInfo{
 				varType: varSuffix,
@@ -396,3 +416,81 @@ editable_statement:
 	}
 
 %%
+
+// Structures that constitute the parse tree.
+
+type variableInfoType int
+type menuItemType int
+type askStatementType int
+type editableStatementType int
+
+const (
+	// Types for variableInfo.
+	varUnspecified = variableInfoType(0)
+	varPrefix      = iota
+	varSuffix      = iota
+	varExplicit    = iota
+	// Types for menuItems.
+	miVariable        = menuItemType(1)
+	miSubmenu         = iota
+	miSubmenuIntRange = iota
+	miAsk             = iota
+	miEditable        = iota
+	// Types for askStatement
+	askDisplay = askStatementType(1)
+	askAnswer  = iota
+	// Types for editableStatement
+	esDisplay  = editableStatementType(1)
+	esOption   = iota
+	esIntRange = iota
+	esVariable = iota
+)
+
+type variableInfo struct {
+	varType variableInfoType
+	name    string
+}
+
+type intRange struct {
+	lo, hi, offset int64
+}
+
+type menu struct {
+	loc          location
+	name         string
+	variableInfo variableInfo
+	menuItems    []menuItem
+}
+
+type askStatement struct {
+	loc          location
+	asType askStatementType
+	label  string
+	action string
+}
+
+type editableStatement struct {
+	loc          location
+	esType       editableStatementType
+	label        string
+	definition   string
+	intRange     intRange
+	variableInfo variableInfo
+}
+
+type menuItem struct {
+	loc          location
+	miType       menuItemType
+	variableInfo variableInfo        // For miVariable
+	label        string              // For all but miVariable.
+	display      string              // For all but miVariable.
+	definition   string              // For miSubmenu and miSubmenuIntRange
+	intRange     intRange            // For miSubmenuIntRange
+	asks         []askStatement      // For miAsk
+	options      []editableStatement // For miEditable
+
+}
+
+func (loc location) String() string {
+	return fmt.Sprintf("%v:%v", loc.line, loc.char)
+}

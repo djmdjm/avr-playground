@@ -60,10 +60,10 @@ menu "channel" {
 		option define "CH_RANGE_FULL_NEG" label "-10>0"
 		option define "CH_RANGE_HALF_NEG" label "-5>0"
 	}
-	submenu label "TUNING"
+	submenu label "TUNING" definition "tuning"
 }
 
-menu "TUNING" {
+menu "tuning" {
 	ask "RESET TUNING" {
 		display "RESET"
 		answer "Y" => call "reset_tune"
