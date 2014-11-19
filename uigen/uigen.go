@@ -123,6 +123,7 @@ func checkMenus(menuList []menu) error {
 			return fmt.Errorf("%v: menu %q not referenced", menu.loc, name)
 		}
 	}
+	// XXX add cycle detection.
 	return nil
 }
 

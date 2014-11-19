@@ -29,6 +29,7 @@
 //                 integer range 0 to 16
 //         }
 // XXX pre/postamble sections for boilerplate like licenses?
+// XXX only editables are integers; need strings too?
 // }
 
 %{
