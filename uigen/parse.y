@@ -456,13 +456,6 @@ type intRange struct {
 	lo, hi, offset int64
 }
 
-type menu struct {
-	loc          location
-	name         string
-	variableInfo variableInfo
-	menuItems    []menuItem
-}
-
 type askStatement struct {
 	loc          location
 	asType askStatementType
@@ -490,6 +483,13 @@ type menuItem struct {
 	asks         []askStatement      // For miAsk
 	options      []editableStatement // For miEditable
 
+}
+
+type menu struct {
+	loc          location
+	name         string
+	variableInfo variableInfo
+	menuItems    []menuItem
 }
 
 func (loc location) String() string {

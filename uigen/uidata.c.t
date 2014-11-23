@@ -46,10 +46,22 @@ struct menu {
 	struct menu_item *items[];
 };
 
-{{range .EditableItems}}struct editable_item {{.Name}} = { "{{.Label}}", {{.Value}} };
+/* Forward declaration of menus */
+{{range .Menus}}struct menu {{.Name}};
 {{end}}
 
-{{range .Editables}}struct editable {{.Name}} = {
+{{range .Menus}}
+/* {{if .Name}}Menu "{{.Name}}"{{else}}Root menu{{end}} */
+
+{{range .Editables}}{{if .Items}}
+enum {
+{{range .Items}}	{{.Value}},
+{{end}}
+};
+{{end}}{{range .Items}}struct editable_item {{.Name}} = { "{{.Label}}", {{.Value}} };
+{{end}}
+
+struct editable {{.Name}} = {
 	"{{.Display}}",
 	&{{.Variable}},
 	{{len .Items}},
@@ -60,21 +72,23 @@ struct menu {
 };
 {{end}}
 
-{{range .AskItems}}struct ask_item {{.Name}} = { "{{.Label}}", {{if .Action}}{{.Action}}{{else}}NULL{{end}} };
+{{range .Asks}}
+{{range .Items}}{{if .Action}}void {{.Action}}(void);
+{{end}}
+{{end}}
+{{range .Items}}struct ask_item {{.Name}} = { "{{.Label}}", {{if .Action}}{{.Action}}{{else}}NULL{{end}} };
 {{end}}
 
-{{range .Asks}}struct ask {{.Name}} = {
+struct ask {{.Name}} = {
 	"{{.Display}}",
 	{{len .Items}},
-	{ {{range .Items}}&{{.Name}}, {{end}} }
+	{
+{{range .Items}}	&{{.Name}},
+{{end}}	}
 };
 {{end}}
 
-{{if .Menus}}/* Forward declaration of menus */
-{{end}}{{range .Menus}}struct menu {{.Name}};
-{{end}}
-
-{{range .MenuItems}}struct menu_item {{.Name}} = {
+{{range .Items}}struct menu_item {{.Name}} = {
 	.label = "{{.Label}}",
 {{if eq .Type "editable"}}	.mi_type = M_EDITABLE,
 	.item = { .editable = &{{.Name}} },
@@ -87,8 +101,12 @@ struct menu {
 }
 {{end}}
 
-{{range .Menus}}struct menu {{.Name}} = {
+struct menu {{.Name}} = {
 	{{len .Items}},
-	{ {{range .Items}}&{{.Name}}, {{end}},
+	{
+{{range .Items}}	&{{.Name}},
+{{end}}	}
 };
+
+{{end}}
 

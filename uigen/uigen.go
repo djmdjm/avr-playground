@@ -6,7 +6,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"text/template"
 )
+
+const templateName = "uidata.c.t"
 
 func (m *menu) mergeItems(items []menuItem) error {
 	for _, item := range items {
@@ -127,11 +130,70 @@ func checkMenus(menuList []menu) error {
 	return nil
 }
 
+type TemplateEditableItem struct {
+	Name, Label string
+}
+
+type TemplateEditable struct {
+	Display, Variable string
+	Items             []TemplateEditableItem
+	HasRange          bool
+	RangeLow, RangeHi int64
+}
+
+type TemplateAskItem struct {
+	Label, Action string
+}
+
+type TemplateAsk struct {
+	Display string
+	Items   []TemplateAskItem
+}
+
+type TemplateMenuItem struct {
+	Name, Type string
+}
+
+type TemplateMenu struct {
+	Name string
+	Items     []TemplateMenuItem
+	Asks      []TemplateAsk
+	Editables []TemplateEditable
+}
+
+// TemplateUI is the data that is passed to the template to be rendered.
+type TemplateUI struct {
+	Menus []TemplateMenu
+}
+
+func prepareMenu(menu menu) (tm TemplateMenu) {
+	tm.Name = menu.name
+	for _, item := range menu.menuItems {
+		switch item.miType {
+		case miSubmenu:
+		case miSubmenuIntRange:
+		case miAsk:
+		case miEditable:
+		default:
+			log.Fatalf("unknown menu type %v", item.miType)
+		}
+	}
+	return
+}
+
+func prepare(menus []menu) (t TemplateUI) {
+	for _, menu := range menus {
+		t.Menus = append(t.Menus, prepareMenu(menu))
+	}
+	return
+}
+
 func main() {
 	flag.Parse()
 	if flag.NArg() != 1 {
 		log.Fatalf("no input file specified")
 	}
+	var tmpl = template.Must(template.ParseFiles(templateName))
 	f, err := os.Open(flag.Arg(0))
 	if err != nil {
 		log.Fatalf("open %q: %v", flag.Arg(0), err)
@@ -149,5 +211,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("check %v:%v", flag.Arg(0), err)
 	}
-	fmt.Printf("%#v\n", menus)
+	td := prepare(menus)
+	//fmt.Printf("%#v\n", menus)
+	err = tmpl.Execute(os.Stdout, td)
+	if err != nil {
+		log.Fatalf("render %v:%v", flag.Arg(0), err)
+	}
 }
