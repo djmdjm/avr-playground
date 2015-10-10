@@ -176,7 +176,7 @@ menus:
 menu:
 	_MENU _ROOT '{' menu_items '}'
 	{
-		$$ = menu{loc: $1, name: ""}
+		$$ = menu{loc: $1, name: "root"}
 		err := $$.mergeItems($4)
 		if err != nil {
 			yylex.Error(err.Error())
@@ -185,8 +185,8 @@ menu:
 |	_MENU _QUOTED '{' menu_items '}'
 	{
 		menuName := $<stringv>2
-		if menuName == "" {
-			yylex.Error("empty menu name")
+		if !isValidIdentifier(menuName) {
+			yylex.Error("invalid menu name")
 		} else {
 			$$ = menu{loc: $1, name: menuName}
 			err := $$.mergeItems($4)

@@ -16,7 +16,7 @@ struct editable {
 	const char *display;
 	int *variable;
 	size_t n;
-	const struct editable_item *items[];
+	const struct editable_item *items;
 	int range_lo, range_hi;	/* If no integer range, then hi<lo */
 };
 
@@ -28,7 +28,7 @@ struct ask_item {
 struct ask {
 	const char *display;
 	size_t n;
-	const struct ask_item *items[];
+	const struct ask_item *items;
 };
 
 struct menu_item {
@@ -49,45 +49,39 @@ struct menu {
 /* Forward declaration of menus */
 {{range .Menus}}struct menu {{.Name}};
 {{end}}
+{{range .Menus}}/* {{if eq .Name "root"}}Root menu{{else}}Menu "{{.Name}}"{{end}} */
 
-{{range .Menus}}
-/* {{if .Name}}Menu "{{.Name}}"{{else}}Root menu{{end}} */
-
-{{range .Editables}}{{if .Items}}
-enum {
-{{range .Items}}	{{.Value}},
-{{end}}
-};
-{{end}}{{range .Items}}struct editable_item {{.Name}} = { "{{.Label}}", {{.Value}} };
-{{end}}
+{{range .Editables}}
+{{if .Items}}
+struct editable_item {{.Name}}_items[] = {
+{{range .Items}}	{ "{{.Label}}", {{.Definition}} },
+{{end}}};{{end}}
 
 struct editable {{.Name}} = {
-	"{{.Display}}",
+	"{{.Label}}",
 	&{{.Variable}},
 	{{len .Items}},
-	{ {{range .Items}}&{{.Name}}, {{end}} },
+	{{if .Items}}{{.Name}}_items{{else}}NULL{{end}},
 	{{if .HasRange}}{{.RangeLow}}, {{.RangeHi}},
 	{{else}}0, -1 /* no integer range */
 	{{end}}
 };
 {{end}}
-
 {{range .Asks}}
-{{range .Items}}{{if .Action}}void {{.Action}}(void);
-{{end}}
-{{end}}
-{{range .Items}}struct ask_item {{.Name}} = { "{{.Label}}", {{if .Action}}{{.Action}}{{else}}NULL{{end}} };
-{{end}}
 
+{{if .Items}}
+{{range .Items}}{{if .Action}}void {{.Action}}(void);
+{{end}}{{end}}
+struct ask_item {{.Name}}_items[] = {
+{{range .Items}}	{ "{{.Label}}", {{if .Action}}{{.Action}}{{else}}NULL{{end}} };
+{{end}}};
+{{end}}
 struct ask {{.Name}} = {
-	"{{.Display}}",
+	"{{.Label}}",
 	{{len .Items}},
-	{
-{{range .Items}}	&{{.Name}},
-{{end}}	}
+	{{if .Items}}{{.Name}}_items{{else}}NULL{{end}},
 };
 {{end}}
-
 {{range .Items}}struct menu_item {{.Name}} = {
 	.label = "{{.Label}}",
 {{if eq .Type "editable"}}	.mi_type = M_EDITABLE,
@@ -97,10 +91,8 @@ struct ask {{.Name}} = {
 {{else if eq .Type "submenu"}}	.mi_type = M_SUBMENU,
 	.item = { .submenu = &{{.Name}} }
 {{else}}#error unknown menu item type "{{.Type}}"
+{{end}}}
 {{end}}
-}
-{{end}}
-
 struct menu {{.Name}} = {
 	{{len .Items}},
 	{

@@ -4,8 +4,8 @@ package main
 
 import (
 	"fmt"
-	//	"log"
 	"strconv"
+	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -260,6 +260,21 @@ func (st *state) Lex(yy *yySymType) int {
 	// There are no bare identifiers in this language, so this is an error.
 	st.lexError("unrecognised token %q", yy.token)
 	return _EOF
+}
+
+// isValidIdentifierChar tests whether a rune is valid in a C identifier.
+func isValidIdentifierChar(r rune) bool {
+	return ((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || (r == '_'))
+}
+
+// isValidIdentifier tests whether a string is a valid C identifier.
+func isValidIdentifier(id string) bool {
+	if id == "" || id == "root" {
+		return false // Reserved.
+	}
+	return strings.IndexFunc(id, func(r rune) bool {
+		return !isValidIdentifierChar(r)
+	}) == -1
 }
 
 // parse calls the yacc-generated parser to parse the specified text.

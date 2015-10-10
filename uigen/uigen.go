@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"text/template"
+	"unicode"
 )
 
 const templateName = "uidata.c.t"
@@ -122,7 +123,7 @@ func checkMenus(menuList []menu) error {
 		}
 	}
 	for name, menu := range menus {
-		if name != "" && !visited[name] {
+		if name != "root" && !visited[name] {
 			return fmt.Errorf("%v: menu %q not referenced", menu.loc, name)
 		}
 	}
@@ -131,34 +132,34 @@ func checkMenus(menuList []menu) error {
 }
 
 type TemplateEditableItem struct {
-	Name, Label string
+	Name, Label, Definition string
 }
 
 type TemplateEditable struct {
-	Display, Variable string
-	Items             []TemplateEditableItem
-	HasRange          bool
-	RangeLow, RangeHi int64
+	Name, Label, Variable string
+	Items                 []TemplateEditableItem
+	HasRange              bool
+	RangeLow, RangeHi     int64
 }
 
 type TemplateAskItem struct {
-	Label, Action string
+	Name, Label, Action, ReturnMenu string
 }
 
 type TemplateAsk struct {
-	Display string
-	Items   []TemplateAskItem
+	Name, Label string
+	Items       []TemplateAskItem
 }
 
 type TemplateMenuItem struct {
-	Name, Type string
+	Name, Label, Type string
 }
 
 type TemplateMenu struct {
-	Name string
-	Items     []TemplateMenuItem
-	Asks      []TemplateAsk
-	Editables []TemplateEditable
+	Label, Name string
+	Items       []TemplateMenuItem
+	Asks        []TemplateAsk
+	Editables   []TemplateEditable
 }
 
 // TemplateUI is the data that is passed to the template to be rendered.
@@ -166,24 +167,97 @@ type TemplateUI struct {
 	Menus []TemplateMenu
 }
 
-func prepareMenu(menu menu) (tm TemplateMenu) {
+// makeIdentifer tries to turn an arbitrary string into a valid C identifer.
+func makeIdentifier(format string, a ...interface{}) string {
+	s := fmt.Sprintf(format, a...)
+	var r []rune
+	for _, c := range s {
+		c = unicode.ToLower(c)
+		if isValidIdentifierChar(c) {
+			r = append(r, c)
+			continue
+		}
+		if unicode.IsSpace(c) || unicode.IsSymbol(c) {
+			r = append(r, '_')
+			continue
+		}
+		// Other characters are simply omitted.
+	}
+	return string(r)
+}
+
+// prepareMenu flattens the syntax tree down to a form better suited for
+// rendering via the template.
+func prepareMenu(menu menu) (tm TemplateMenu, err error) {
 	tm.Name = menu.name
-	for _, item := range menu.menuItems {
-		switch item.miType {
+	// XXX handle variableInfo
+	for i, mi := range menu.menuItems {
+		ident := fmt.Sprintf("%v_%v", tm.Name, i)
+		switch mi.miType {
 		case miSubmenu:
+			tmi := TemplateMenuItem{
+				Label: mi.label,
+				Type:  "submenu",
+				Name:  mi.definition,
+			}
+			tm.Items = append(tm.Items, tmi)
 		case miSubmenuIntRange:
+			// XXX how to implement variable reference?
 		case miAsk:
+			ta := TemplateAsk{
+				Label: mi.label,
+				Name:  makeIdentifier("%v_ask_%v", ident, mi.label),
+			}
+			for j, as := range mi.asks {
+				if as.asType != askAnswer {
+					err = fmt.Errorf("Unexpected ask type")
+					return
+				}
+				tai := TemplateAskItem{
+					Name:       makeIdentifier("%v_%v_%v", ta.Name, j, as.label),
+					Label:      as.label,
+					Action:     as.action,
+					ReturnMenu: tm.Name,
+				}
+				ta.Items = append(ta.Items, tai)
+			}
+			tm.Asks = append(tm.Asks, ta)
 		case miEditable:
+			te := TemplateEditable{
+				Label:    mi.label,
+				Name:     makeIdentifier("%v_editable_%v", ident, mi.label),
+				RangeLow: mi.intRange.lo,
+				RangeHi:  mi.intRange.hi,
+				HasRange: mi.intRange.lo < mi.intRange.hi,
+			}
+			for j, es := range mi.options {
+				if es.esType != esOption {
+					err = fmt.Errorf("Unexpected editable item type")
+					return
+				}
+				tei := TemplateEditableItem{
+					Name:       makeIdentifier("%v_%v_%v", te.Name, j, es.definition),
+					Label:      es.label,
+					Definition: es.definition,
+				}
+				te.Items = append(te.Items, tei)
+			}
+			tm.Editables = append(tm.Editables, te)
 		default:
-			log.Fatalf("unknown menu type %v", item.miType)
+			log.Fatalf("unknown menu type %v", mi.miType)
 		}
 	}
 	return
 }
 
-func prepare(menus []menu) (t TemplateUI) {
+func prepare(menus []menu) (t TemplateUI, err error) {
 	for _, menu := range menus {
-		t.Menus = append(t.Menus, prepareMenu(menu))
+		var preparedMenu TemplateMenu
+		preparedMenu, err = prepareMenu(menu)
+		if err != nil {
+			return
+		}
+		t.Menus = append(t.Menus, preparedMenu)
 	}
 	return
 }
@@ -211,8 +285,11 @@ func main() {
 	if err != nil {
 		log.Fatalf("check %v:%v", flag.Arg(0), err)
 	}
-	td := prepare(menus)
-	//fmt.Printf("%#v\n", menus)
+	td, err := prepare(menus)
+	if err != nil {
+		log.Fatalf("prepare: %v:%v", flag.Arg(0), err)
+	}
+	//fmt.Printf("%#v\n", menus[0].menuItems[0].options[0])
 	err = tmpl.Execute(os.Stdout, td)
 	if err != nil {
 		log.Fatalf("render %v:%v", flag.Arg(0), err)
