@@ -10,7 +10,7 @@ struct menu;
 struct editable_item {
 	const char *label;	/* NULL if integer range */
 	int value;
-}
+};
 
 struct editable {
 	const char *display;
@@ -43,7 +43,15 @@ struct menu_item {
 
 struct menu {
 	size_t n;
-	struct menu_item *items[];
+	struct menu_item *items;
+};
+
+/* XXX */
+enum XXX {
+CH_EVENT_NOTE, CH_EVENT_BEND, CH_EVENT_MODWHEEL, CH_EVENT_VELOCITY,
+CH_EVENT_CHANNEL_TOUCH, MIDI_OMNI, CH_RANGE_FULL, CH_RANGE_HALF,
+CH_RANGE_FULL_POS, CH_RANGE_HALF_POS, CH_RANGE_FULL_NEG, CH_RANGE_HALF_NEG,
+POLY_LAST, POLY_FIRST, POLY_LOWEST, POLY_HIGHEST, POLY_RANDOM
 };
 
 /* Forward declaration of menus */
@@ -59,7 +67,7 @@ struct editable_item {{.Name}}_items[] = {
 
 struct editable {{.Name}} = {
 	"{{.Label}}",
-	&{{.Variable}},
+	NULL, /* XXX variable */
 	{{len .Items}},
 	{{if .Items}}{{.Name}}_items{{else}}NULL{{end}},
 	{{if .HasRange}}{{.RangeLow}}, {{.RangeHi}},
@@ -73,7 +81,7 @@ struct editable {{.Name}} = {
 {{range .Items}}{{if .Action}}void {{.Action}}(void);
 {{end}}{{end}}
 struct ask_item {{.Name}}_items[] = {
-{{range .Items}}	{ "{{.Label}}", {{if .Action}}{{.Action}}{{else}}NULL{{end}} };
+{{range .Items}}	{ "{{.Label}}", {{if .Action}}{{.Action}}{{else}}NULL{{end}} },
 {{end}}};
 {{end}}
 struct ask {{.Name}} = {
@@ -82,23 +90,23 @@ struct ask {{.Name}} = {
 	{{if .Items}}{{.Name}}_items{{else}}NULL{{end}},
 };
 {{end}}
-{{range .Items}}struct menu_item {{.Name}} = {
-	.label = "{{.Label}}",
-{{if eq .Type "editable"}}	.mi_type = M_EDITABLE,
-	.item = { .editable = &{{.Name}} },
-{{else if eq .Type "ask"}}	.mi_type = M_ASK,
-	.item = { .ask = &{{.Name}} }
-{{else if eq .Type "submenu"}}	.mi_type = M_SUBMENU,
-	.item = { .submenu = &{{.Name}} }
+
+struct menu_item {{.Name}}_items[] = {
+{{range .Items}}	{
+		.label = "{{.Label}}",
+{{if eq .Type "editable"}}		.mi_type = M_EDITABLE,
+		.item = { .editable = &{{.Name}} },
+{{else if eq .Type "ask"}}		.mi_type = M_ASK,
+		.item = { .ask = &{{.Name}} }
+{{else if eq .Type "submenu"}}		.mi_type = M_SUBMENU,
+		.item = { .submenu = &{{.Name}} }
 {{else}}#error unknown menu item type "{{.Type}}"
-{{end}}}
 {{end}}
-struct menu {{.Name}} = {
-	{{len .Items}},
-	{
-{{range .Items}}	&{{.Name}},
-{{end}}	}
+	},
+{{end}}
 };
+
+struct menu {{.Name}} = { {{len .Items}}, {{.Name}}_items};
 
 {{end}}
 

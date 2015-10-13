@@ -59,43 +59,48 @@ func (mi *menuItem) mergeAsk(statements []askStatement) error {
 }
 
 func (mi *menuItem) mergeEditable(statements []editableStatement) error {
-	for _, statement := range statements {
-		if statement.esType == esVariable {
+	for _, es := range statements {
+		switch es.esType {
+		case esVariable:
 			if mi.variableInfo.varType != varUnspecified {
 				return fmt.Errorf("variable information already specified for editable")
 			}
-			mi.variableInfo = statement.variableInfo
-		} else if statement.esType == esDisplay {
+			mi.variableInfo = es.variableInfo
+		case esDisplay:
 			if mi.display != "" {
 				return fmt.Errorf("display already specified for editable statement")
 			}
-			mi.display = statement.label
-		} else if statement.esType == esOption || statement.esType == esIntRange {
-			// XXX check syntax, for dupe, etc.
-			mi.options = append(mi.options, statement)
-		} else {
-			return fmt.Errorf("unknown editable item %v", statement.esType)
+			mi.display = es.label
+		case esOption:
+			// more syntax checks?
+			mi.options = append(mi.options, es)
+		case esIntRange:
+			// range validity check?
+			mi.intRange = es.intRange
+		default:
+			return fmt.Errorf("unknown editable item %v", es.esType)
 		}
 	}
 	// Check for duplicates.
 	labelNames := map[string]bool{}
 	definitionNames := map[string]bool{}
 	seenIntRange := false
-	for _, statement := range statements {
-		if statement.esType == esIntRange {
+	for _, es := range statements {
+		switch es.esType {
+		case esIntRange:
 			if seenIntRange {
 				return fmt.Errorf("multiple integer range options in editable statement")
 			}
 			seenIntRange = true
-		} else if statement.esType == esOption {
-			if labelNames[statement.label] {
-				return fmt.Errorf("duplicate editable label %q", statement.label)
+		case esOption:
+			if labelNames[es.label] {
+				return fmt.Errorf("duplicate editable label %q", es.label)
 			}
-			if definitionNames[statement.definition] {
-				return fmt.Errorf("duplicate editable definition %q", statement.definition)
+			if definitionNames[es.definition] {
+				return fmt.Errorf("duplicate editable definition %q", es.definition)
 			}
-			labelNames[statement.label] = true
-			definitionNames[statement.definition] = true
+			labelNames[es.label] = true
+			definitionNames[es.definition] = true
 		}
 	}
 	return nil
@@ -208,6 +213,11 @@ func prepareMenu(menu menu) (tm TemplateMenu, err error) {
 				Label: mi.label,
 				Name:  makeIdentifier("%v_ask_%v", ident, mi.label),
 			}
+			tmi := TemplateMenuItem{
+				Label: mi.label,
+				Type:  "ask",
+				Name:  ta.Name,
+			}
 			for j, as := range mi.asks {
 				if as.asType != askAnswer {
 					err = fmt.Errorf("Unexpected ask type")
@@ -222,6 +232,7 @@ func prepareMenu(menu menu) (tm TemplateMenu, err error) {
 				ta.Items = append(ta.Items, tai)
 			}
 			tm.Asks = append(tm.Asks, ta)
+			tm.Items = append(tm.Items, tmi)
 		case miEditable:
 			te := TemplateEditable{
 				Label:    mi.label,
@@ -230,9 +241,14 @@ func prepareMenu(menu menu) (tm TemplateMenu, err error) {
 				RangeHi:  mi.intRange.hi,
 				HasRange: mi.intRange.lo < mi.intRange.hi,
 			}
+			tmi := TemplateMenuItem{
+				Label: mi.label,
+				Type:  "editable",
+				Name:  te.Name,
+			}
 			for j, es := range mi.options {
 				if es.esType != esOption {
-					err = fmt.Errorf("Unexpected editable item type")
+					err = fmt.Errorf("Unexpected editable item type %v at %v", es.esType, es.loc)
 					return
 				}
 				tei := TemplateEditableItem{
@@ -243,6 +259,7 @@ func prepareMenu(menu menu) (tm TemplateMenu, err error) {
 				te.Items = append(te.Items, tei)
 			}
 			tm.Editables = append(tm.Editables, te)
+			tm.Items = append(tm.Items, tmi)
 		default:
 			log.Fatalf("unknown menu type %v", mi.miType)
 		}

@@ -2,7 +2,7 @@
 
 menu root {
 	variable prefix "cfg."
-	submenu label "EDIT CHANNEL" definition "channel list"
+	submenu label "EDIT CHANNEL" definition "channel_list"
 	editable "POLY MODE" {
 		display "MODE"
 		variable suffix "poly_mode"
@@ -29,7 +29,7 @@ menu root {
 	}
 }
 
-menu "channel list" {
+menu "channel_list" {
 	variable suffix "channel"
 	submenu index min 1 max 8 offset -1 label "CHANNEL" definition "channel"
 }
