@@ -10,6 +10,10 @@
 //
 // An example:
 //
+// include "constants.h"
+// boilerplate file "license.txt"
+// boilerplate "/* don't edit me! */"
+//
 // menu root {
 //         variable prefix "config."
 //         editable "mode" {
@@ -41,29 +45,31 @@ import (
 
 // keywords holds the language keywords and their symbolic values.
 var keywords = map[string]int{
-	"answer":     _ANSWER,
-	"ask":        _ASK,
-	"call":       _CALL,
-	"define":     _DEFINE,
-	"definition": _DEFINITION,
-	"display":    _DISPLAY,
-	"editable":   _EDITABLE,
-	"index":      _INDEX,
-	"integer":    _INTEGER,
-	"label":      _LABEL,
-	"max":        _MAX,
-	"menu":       _MENU,
-	"min":        _MIN,
-	"offset":     _OFFSET,
-	"option":     _OPTION,
-	"prefix":     _PREFIX,
-	"range":      _RANGE,
-	"return":     _RETURN,
-	"root":       _ROOT,
-	"submenu":    _SUBMENU,
-	"suffix":     _SUFFIX,
-	"to":         _TO,
-	"variable":   _VARIABLE,
+	"answer":      _ANSWER,
+	"ask":         _ASK,
+	"boilerplate": _BOILERPLATE,
+	"call":        _CALL,
+	"define":      _DEFINE,
+	"definition":  _DEFINITION,
+	"display":     _DISPLAY,
+	"editable":    _EDITABLE,
+	"file":        _FILE,
+	"get":         _GET,
+	"index":       _INDEX,
+	"include":     _INCLUDE,
+	"integer":     _INTEGER,
+	"label":       _LABEL,
+	"max":         _MAX,
+	"menu":        _MENU,
+	"min":         _MIN,
+	"option":      _OPTION,
+	"range":       _RANGE,
+	"return":      _RETURN,
+	"root":        _ROOT,
+	"set":         _SET,
+	"submenu":     _SUBMENU,
+	"to":          _TO,
+	"variable":    _VARIABLE,
 }
 
 // location is a human-readable location in the lexer/parser input.
@@ -72,7 +78,6 @@ type location struct {
 	line int // Line number.
 	char int // Character number in line.
 }
-
 %}
 
 // These fields end up in struct yySymType.
@@ -86,8 +91,10 @@ type location struct {
 	intv    	int64      // Integer value.
 
 	// Types for parser productions.
+	statement		statement
+	statements		[]statement
+	boilerplate		boilerplate
 	menu			menu
-	menus			[]menu
 	menuItem		menuItem
 	menuItems		[]menuItem
 	askStatement		askStatement
@@ -111,25 +118,28 @@ type location struct {
 // Keywords.
 %token <loc>		_ANSWER
 %token <loc>		_ASK
+%token <loc>		_BOILERPLATE
 %token <loc>		_CALL
 %token <loc>		_DEFINE
 %token <loc>		_DEFINITION
 %token <loc>		_DISPLAY
+%token <loc>		_FILE
 %token <loc>		_EDITABLE
 %token <loc>		_INDEX
+%token <loc>		_INCLUDE
 %token <loc>		_INTEGER
 %token <loc>		_LABEL
 %token <loc>		_MAX
 %token <loc>		_MENU
 %token <loc>		_MIN
-%token <loc>		_OFFSET
 %token <loc>		_OPTION
 %token <loc>		_PREFIX
 %token <loc>		_RANGE
 %token <loc>		_RETURN
 %token <loc>		_ROOT
 %token <loc>		_SUBMENU
-%token <loc>		_SUFFIX
+%token <loc>		_GET
+%token <loc>		_SET
 %token <loc>		_THEN    	// "=>"
 %token <loc>		_TO
 %token <loc>		_VARIABLE
@@ -140,8 +150,10 @@ type location struct {
 %token <loc>		_QUOTED
 
 // Specify the union fields for parser productions. 'type' is a misnomer :/
+%type <statement>		statement
+%type <statements>		statements
+%type <boilerplate>		boilerplate
 %type <menu>			menu
-%type <menus>			menus
 %type <menuItems>		menu_items
 %type <menuItem>		menu_item ask_item submenu_item editable_item
 %type <askStatements>		ask_statements
@@ -159,19 +171,45 @@ type location struct {
 
 // Whole file.
 file:
-	menus _EOF
+	statements _EOF
 	{
-		yylex.(*state).menus = $1
+		yylex.(*state).statements = $1
 		return 0
 	}
 
-// Top level of the file consists of one or more "menu" statements.
-menus:
-     	menu			{ $$ = []menu{$1} }
-|	menus menu
+// Top level of the file consists of one or more "menu" or
+// "boilerplate" statements.
+statements:
+     	statement		{ $$ = []statement{$1} }
+|	statements statement
 	{
 		$$ = append($1, $2)
 	}
+
+statement:
+	menu
+	{
+		$$ = statement{loc: $<loc>1, sType: sMenu, menu: $1}
+	}
+|	boilerplate
+	{
+		$$ = statement{loc: $<loc>1, sType: sBoilerplate, boilerplate: $1}
+	}
+
+boilerplate:
+	_INCLUDE _QUOTED
+	{
+		$$ = boilerplate{loc: $1, bType: bInclude, value: $<stringv>2}
+	}
+|	_BOILERPLATE _FILE _QUOTED
+	{
+		$$ = boilerplate{loc: $1, bType: bFile, value: $<stringv>3}
+	}
+|	_BOILERPLATE _QUOTED
+	{
+		$$ = boilerplate{loc: $1, bType: bText, value: $<stringv>2}
+	}
+
 
 menu:
 	_MENU _ROOT '{' menu_items '}'
@@ -206,36 +244,14 @@ menu_item:
 	ask_item		{ $$ = $1 }
 |	editable_item		{ $$ = $1 }
 |	submenu_item		{ $$ = $1 }
-|	_VARIABLE _QUOTED
+|	_VARIABLE _GET _QUOTED _SET _QUOTED
 	{
 		$$ = menuItem{
 			loc: $1,
 			miType: miVariable,
 			variableInfo: variableInfo{
-				varType: varExplicit,
-				name: $<stringv>2,
-			},
-		}
-	}
-|	_VARIABLE _PREFIX _QUOTED
-	{
-		$$ = menuItem{
-			loc: $1,
-			miType: miVariable,
-			variableInfo: variableInfo{
-				varType: varPrefix,
-				name: $<stringv>3,
-			},
-		}
-	}
-|	_VARIABLE _SUFFIX _QUOTED
-	{
-		$$ = menuItem{
-			loc: $1,
-			miType: miVariable,
-			variableInfo: variableInfo{
-				varType: varSuffix,
-				name: $<stringv>3,
+				get: $<stringv>3,
+				set: $<stringv>5,
 			},
 		}
 	}
@@ -259,31 +275,35 @@ submenu_item:
 			definition: $<stringv>5,
 		}
 	}
-|	_SUBMENU _INDEX _MIN _INT _MAX _INT _OFFSET _INT _LABEL _QUOTED _DEFINITION _QUOTED
+|	_SUBMENU _INDEX _MIN _INT _MAX _INT _LABEL _QUOTED _DEFINITION _QUOTED _SET _QUOTED
 	{
 		$$ = menuItem{
 			loc: $1,
 			miType: miSubmenuIntRange,
-			label: $<stringv>10,
-			definition: $<stringv>12,
-			intRange: intRange{
-				lo: $<intv>4,
-				hi: $<intv>6,
-				offset: $<intv>8,
-			},
-		}
-	}
-|	_SUBMENU _INDEX _MIN _INT _MAX _INT _OFFSET _INT _LABEL _QUOTED
-	{
-		$$ = menuItem{
-			loc: $1,
-			miType: miSubmenuIntRange,
-			label: $<stringv>10,
+			label: $<stringv>8,
 			definition: $<stringv>10,
 			intRange: intRange{
 				lo: $<intv>4,
 				hi: $<intv>6,
-				offset: $<intv>8,
+			},
+			variableInfo: variableInfo{
+				set: $<stringv>12,
+			},
+		}
+	}
+|	_SUBMENU _INDEX _MIN _INT _MAX _INT _LABEL _QUOTED _SET _QUOTED
+	{
+		$$ = menuItem{
+			loc: $1,
+			miType: miSubmenuIntRange,
+			label: $<stringv>8,
+			definition: $<stringv>8,
+			intRange: intRange{
+				lo: $<intv>4,
+				hi: $<intv>6,
+			},
+			variableInfo: variableInfo{
+				set: $<stringv>10,
 			},
 		}
 	}
@@ -381,37 +401,14 @@ editable_statement:
 			},
 		}
 	}
-|	_INTEGER _RANGE _INT _TO _INT _OFFSET _INT
-	{
-		$$ = editableStatement{
-			loc: $1,
-			esType: esIntRange,
-			intRange: intRange{
-				lo: $<intv>3,
-				hi: $<intv>5,
-				offset: $<intv>7,
-			},
-		}
-	}
-|	_VARIABLE _QUOTED
+|	_VARIABLE _GET _QUOTED _SET _QUOTED
 	{
 		$$ = editableStatement{
 			loc: $1,
 			esType: esVariable,
 			variableInfo: variableInfo{
-				varType: varExplicit,
-				name: $<stringv>2,
-			},
-		}
-	}
-|	_VARIABLE _SUFFIX _QUOTED
-	{
-		$$ = editableStatement{
-			loc: $1,
-			esType: esVariable,
-			variableInfo: variableInfo{
-				varType: varSuffix,
-				name: $<stringv>3,
+				get: $<stringv>3,
+				set: $<stringv>5,
 			},
 		}
 	}
@@ -424,40 +421,48 @@ type variableInfoType int
 type menuItemType int
 type askStatementType int
 type editableStatementType int
+type statementType int
+type boilerplateType int
 
 const (
-	// Types for variableInfo.
-	varUnspecified = variableInfoType(0)
-	varPrefix      = iota
-	varSuffix      = iota
-	varExplicit    = iota
 	// Types for menuItems.
-	miVariable        = menuItemType(1)
-	miSubmenu         = iota
-	miSubmenuIntRange = iota
-	miAsk             = iota
-	miEditable        = iota
+	_                       = iota
+	miVariable menuItemType = iota
+	miSubmenu
+	miSubmenuIntRange
+	miAsk
+	miEditable
 	// Types for askStatement
-	askDisplay = askStatementType(1)
-	askAnswer  = iota
+	_                           = iota
+	askDisplay askStatementType = iota
+	askAnswer
 	// Types for editableStatement
-	esDisplay  = editableStatementType(1)
-	esOption   = iota
-	esIntRange = iota
-	esVariable = iota
+	_                               = iota
+	esDisplay editableStatementType = iota
+	esOption
+	esIntRange
+	esVariable
+	// Types for statement
+	_                   = iota
+	sMenu statementType = iota
+	sBoilerplate
+	// Types for boilerplate text
+	_                     = iota
+	bText boilerplateType = iota
+	bInclude
+	bFile
 )
 
 type variableInfo struct {
-	varType variableInfoType
-	name    string
+	get, set string
 }
 
 type intRange struct {
-	lo, hi, offset int64
+	lo, hi int64
 }
 
 type askStatement struct {
-	loc          location
+	loc    location
 	asType askStatementType
 	label  string
 	action string
@@ -490,6 +495,19 @@ type menu struct {
 	name         string
 	variableInfo variableInfo
 	menuItems    []menuItem
+}
+
+type boilerplate struct {
+	loc   location
+	bType boilerplateType
+	value string
+}
+
+type statement struct {
+	loc         location
+	sType       statementType
+	menu        menu
+	boilerplate boilerplate
 }
 
 func (loc location) String() string {

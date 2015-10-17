@@ -1,11 +1,14 @@
 # Menu definitions for MIDI/CV converter
 
+boilerplate "/* Generated from menu.def -- do not edit */"
+boilerplate file "../LICENSE"
+include "constants.h"
+
 menu root {
-	variable prefix "cfg."
 	submenu label "EDIT CHANNEL" definition "channel_list"
 	editable "POLY MODE" {
 		display "MODE"
-		variable suffix "poly_mode"
+		variable get "get_poly" set "set_poly"
 		option define "POLY_LAST" label "last"
 		option define "POLY_FIRST" label "first"
 		option define "POLY_LOWEST" label "lowest"
@@ -30,14 +33,13 @@ menu root {
 }
 
 menu "channel_list" {
-	variable suffix "channel"
-	submenu index min 1 max 8 offset -1 label "CHANNEL" definition "channel"
+	submenu index min 1 max 8 label "CHANNEL" definition "channel" set "set_channel"
 }
 
 menu "channel" {
 	editable "MIDI EVENT" {
 		display "EV. TYPE"
-		variable suffix "midi_event_type"
+		variable get "get_evtype" set "set_evtype"
 		option define "CH_EVENT_NOTE" label "note"
 		option define "CH_EVENT_BEND" label "bender"
 		option define "CH_EVENT_MODWHEEL" label "modwheel"
@@ -46,13 +48,13 @@ menu "channel" {
 	}
 	editable "MIDI CHANNEL" {
 		display "MIDI CH"
-		variable suffix "midi_channel"
+		variable get "get_midich" set "set_midich"
 		integer range 1 to 16
 		option define "MIDI_OMNI" label "omni"
 	}
 	editable "OUTPUT RANGE" {
 		display "RANGE"
-		variable suffix "output_range"
+		variable get "get_output_range" set "set_output_range"
 		option define "CH_RANGE_FULL" label "-10>+10"
 		option define "CH_RANGE_HALF" label "-5>+5"
 		option define "CH_RANGE_FULL_POS" label "0>+10"
@@ -71,12 +73,12 @@ menu "tuning" {
 	}
 	editable "OFFSET" {
 		display "OFFSET"
-		variable suffix "offset"
+		variable get "get_offset" set "set_offset"
 		integer range -32768 to 32767
 	}
 	editable "SCALE" {
 		display "SCALE"
-		variable suffix "offset"
+		variable get "get_scale" set "set_scale"
 		integer range -32768 to 32767
 	}
 }

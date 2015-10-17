@@ -22,7 +22,7 @@ type state struct {
 	lastToken string   // most recently returned token, for error messages.
 
 	// Parser state.
-	menus []menu // top level of parse tree.
+	statements []statement // top level of parse tree.
 }
 
 // LexError is the error type for errors encountered during lexing.
@@ -278,7 +278,7 @@ func isValidIdentifier(id string) bool {
 }
 
 // parse calls the yacc-generated parser to parse the specified text.
-func parse(text []byte) ([]menu, error) {
+func parse(text []byte) ([]statement, error) {
 	st := &state{
 		text: text,
 		loc:  location{line: 1},
@@ -286,5 +286,5 @@ func parse(text []byte) ([]menu, error) {
 	// To turn on maximum debugging:
 	// yyDebug = 4
 	yyParse(st)
-	return st.menus, st.err
+	return st.statements, st.err
 }
