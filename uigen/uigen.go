@@ -155,6 +155,12 @@ type TemplateEditable struct {
 	RangeLow, RangeHi int64
 }
 
+type TemplateSubmenuRange struct {
+	Name, Label, Definition string
+	Set                     string
+	RangeLow, RangeHi       int64
+}
+
 type TemplateAskItem struct {
 	Name, Label, Action, ReturnMenu string
 }
@@ -166,14 +172,14 @@ type TemplateAsk struct {
 
 type TemplateMenuItem struct {
 	Name, Label, Type string
-	Get, Set          string
 }
 
 type TemplateMenu struct {
-	Label, Name string
-	Items       []TemplateMenuItem
-	Asks        []TemplateAsk
-	Editables   []TemplateEditable
+	Label, Name   string
+	Items         []TemplateMenuItem
+	Asks          []TemplateAsk
+	Editables     []TemplateEditable
+	SubmenuRanges []TemplateSubmenuRange
 }
 
 // TemplateUI is the data that is passed to the template to be rendered.
@@ -214,13 +220,18 @@ func prepareMenu(menu menu) (tm TemplateMenu, err error) {
 			}
 			tm.Items = append(tm.Items, tmi)
 		case miSubmenuIntRange:
+			tsr := TemplateSubmenuRange{
+				Label:      mi.label,
+				Definition: mi.definition,
+				Name:       makeIdentifier("%v_submenu_range_%v", ident, mi.label),
+				Set:        mi.variableInfo.set,
+			}
 			tmi := TemplateMenuItem{
 				Label: mi.label,
 				Type:  "submenurange",
-				Name:  mi.definition,
-				Get:   mi.variableInfo.get,
-				Set:   mi.variableInfo.set,
+				Name:  makeIdentifier("%v_submenu_range_%v", ident, mi.label),
 			}
+			tm.SubmenuRanges = append(tm.SubmenuRanges, tsr)
 			tm.Items = append(tm.Items, tmi)
 		case miAsk:
 			ta := TemplateAsk{

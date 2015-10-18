@@ -19,7 +19,7 @@ struct editable_item {
 struct editable {
 	const char *display;
 	int (*get)(void);
-	int (*set)(void);
+	void (*set)(int);
 	int range_lo, range_hi;	/* If no integer range, then hi<lo */
 	size_t n;
 	const struct editable_item *items;
@@ -38,7 +38,7 @@ struct ask {
 
 struct submenu_range {
 	const char *label;
-	int (*set)(void);
+	void (*set)(int);
 	int range_lo, range_hi;	/* If no integer range, then hi<lo */
 	struct menu *definition;
 };
@@ -75,9 +75,17 @@ struct editable {{.Name}} = {
 	{{.Get}},
 	{{.Set}},
 	{{if .HasRange}}{{.RangeLow}}, {{.RangeHi}},
-	{{else}}0, -1 /* no integer range */
+	{{else}}0, -1, /* no integer range */
 	{{end}}{{len .Items}},
 	{{if .Items}}{{.Name}}_items{{else}}NULL{{end}},
+};
+{{end}}
+{{range .SubmenuRanges}}
+struct submenu_range {{.Name}} = {
+	"{{.Label}}",
+	{{.Set}},
+	{{.RangeLow}}, {{.RangeHi}},
+	&{{.Definition}},
 };
 {{end}}
 {{range .Asks}}
