@@ -53,6 +53,7 @@ var keywords = map[string]int{
 	"definition":  _DEFINITION,
 	"display":     _DISPLAY,
 	"editable":    _EDITABLE,
+	"every":       _EVERY,
 	"file":        _FILE,
 	"get":         _GET,
 	"index":       _INDEX,
@@ -123,10 +124,12 @@ type location struct {
 %token <loc>		_DEFINE
 %token <loc>		_DEFINITION
 %token <loc>		_DISPLAY
-%token <loc>		_FILE
 %token <loc>		_EDITABLE
-%token <loc>		_INDEX
+%token <loc>		_EVERY
+%token <loc>		_FILE
+%token <loc>		_GET
 %token <loc>		_INCLUDE
+%token <loc>		_INDEX
 %token <loc>		_INTEGER
 %token <loc>		_LABEL
 %token <loc>		_MAX
@@ -137,9 +140,8 @@ type location struct {
 %token <loc>		_RANGE
 %token <loc>		_RETURN
 %token <loc>		_ROOT
-%token <loc>		_SUBMENU
-%token <loc>		_GET
 %token <loc>		_SET
+%token <loc>		_SUBMENU
 %token <loc>		_THEN    	// "=>"
 %token <loc>		_TO
 %token <loc>		_VARIABLE
@@ -412,6 +414,18 @@ editable_statement:
 			},
 		}
 	}
+|	_VARIABLE _GET _QUOTED _SET _QUOTED _EVERY
+	{
+		$$ = editableStatement{
+			loc: $1,
+			esType: esVariable,
+			variableInfo: variableInfo{
+				get: $<stringv>3,
+				set: $<stringv>5,
+				every: true,
+			},
+		}
+	}
 
 %%
 
@@ -455,6 +469,7 @@ const (
 
 type variableInfo struct {
 	get, set string
+	every    bool
 }
 
 type intRange struct {
@@ -495,6 +510,7 @@ type menu struct {
 	name         string
 	variableInfo variableInfo
 	menuItems    []menuItem
+	parent       string      // Filled by uigen.go. "" for root.
 }
 
 type boilerplate struct {

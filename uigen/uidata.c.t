@@ -20,6 +20,7 @@ struct editable {
 	const char *display;
 	int (*get)(void);
 	void (*set)(int);
+	int set_every;
 	int range_lo, range_hi;	/* If no integer range, then hi<lo */
 	size_t n;
 	const struct editable_item *items;
@@ -57,6 +58,7 @@ struct menu_item {
 struct menu {
 	size_t n;
 	struct menu_item *items;
+	struct menu *parent;
 };
 
 /* Forward declaration of menus */
@@ -74,6 +76,7 @@ struct editable {{.Name}} = {
 	"{{.Label}}",
 	{{.Get}},
 	{{.Set}},
+	{{if .Every}}1{{else}}0{{end}},
 	{{if .HasRange}}{{.RangeLow}}, {{.RangeHi}},
 	{{else}}0, -1, /* no integer range */
 	{{end}}{{len .Items}},
@@ -121,7 +124,10 @@ struct menu_item {{.Name}}_items[] = {
 {{end}}
 };
 
-struct menu {{.Name}} = { {{len .Items}}, {{.Name}}_items};
+struct menu {{.Name}} = {
+	{{len .Items}}, {{.Name}}_items,
+	{{if .Parent}}&{{.Parent}}{{else}}NULL{{end}}
+};
 
 {{end}}
 

@@ -10,7 +10,9 @@ import (
 	"unicode"
 )
 
-const templateName = "uidata.c.t"
+//go:generate go tool yacc -o parse.go -p parser parse.y
+
+var templatePath = flag.String("template", "uidata.c.t", "path to template")
 
 func (m *menu) mergeItems(items []menuItem) error {
 	for _, mi := range items {
@@ -118,15 +120,23 @@ func checkStatements(statements []statement) error {
 		}
 	}
 	// Check for missing submenus and ones that are unused.
+	if menus["root"] == nil {
+		return fmt.Errorf("%v: missing root menu", flag.Arg(0))
+	}
 	visited := map[string]bool{}
 	for _, menu := range menus {
 		for _, mi := range menu.menuItems {
 			if mi.miType != miSubmenu && mi.miType != miSubmenuIntRange {
 				continue
 			}
-			if menus[mi.definition] == nil {
+			child := menus[mi.definition]
+			if child == nil {
 				return fmt.Errorf("%v: missing menu %q", flag.Arg(0), mi.loc, mi.definition)
 			}
+			if child.parent != "" {
+				return fmt.Errorf("%v: menu %q has multiple parents: %q, %q", flag.Arg(0), child.loc, child.parent, menu.name)
+			}
+			child.parent = menu.name
 			visited[mi.definition] = true
 		}
 	}
@@ -150,6 +160,7 @@ type TemplateEditableItem struct {
 type TemplateEditable struct {
 	Name, Label       string
 	Get, Set          string
+	Every             bool
 	Items             []TemplateEditableItem
 	HasRange          bool
 	RangeLow, RangeHi int64
@@ -175,11 +186,11 @@ type TemplateMenuItem struct {
 }
 
 type TemplateMenu struct {
-	Label, Name   string
-	Items         []TemplateMenuItem
-	Asks          []TemplateAsk
-	Editables     []TemplateEditable
-	SubmenuRanges []TemplateSubmenuRange
+	Label, Name, Parent string
+	Items               []TemplateMenuItem
+	Asks                []TemplateAsk
+	Editables           []TemplateEditable
+	SubmenuRanges       []TemplateSubmenuRange
 }
 
 // TemplateUI is the data that is passed to the template to be rendered.
@@ -209,6 +220,7 @@ func makeIdentifier(format string, a ...interface{}) string {
 
 func prepareMenu(menu menu) (tm TemplateMenu, err error) {
 	tm.Name = menu.name
+	tm.Parent = menu.parent
 	for i, mi := range menu.menuItems {
 		ident := fmt.Sprintf("%v_%v", tm.Name, i)
 		switch mi.miType {
@@ -267,6 +279,7 @@ func prepareMenu(menu menu) (tm TemplateMenu, err error) {
 				HasRange: mi.intRange.lo < mi.intRange.hi,
 				Get:      mi.variableInfo.get,
 				Set:      mi.variableInfo.set,
+				Every:    mi.variableInfo.every,
 			}
 			tmi := TemplateMenuItem{
 				Label: mi.label,
@@ -344,7 +357,7 @@ func main() {
 	if flag.NArg() != 1 {
 		log.Fatalf("no input file specified")
 	}
-	var tmpl = template.Must(template.ParseFiles(templateName))
+	var tmpl = template.Must(template.ParseFiles(*templatePath))
 	f, err := os.Open(flag.Arg(0))
 	if err != nil {
 		log.Fatalf("open %q: %v", flag.Arg(0), err)
