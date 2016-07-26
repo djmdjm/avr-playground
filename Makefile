@@ -15,14 +15,16 @@ AVRDUDE_EXTRA=-xspeed=7 -V
 OPT=-Os
 
 WARNFLAGS=-Wall -Wextra 
-WARNFLAGS+=-Werror -Wno-type-limits -Wno-unused
+WARNFLAGS+=-Werror
+WARNFLAGS+=-Wno-type-limits -Wno-unused -Wno-unused-parameter
+WARNFLAGS+=-Wno-missing-field-initializers
 
 CFLAGS=-mmcu=${MCU} -DF_CPU=${CPUFREQ}UL ${WARNFLAGS} ${OPT} -std=gnu99
 CFLAGS+=-funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS+=-g
 
 LIBAVR_OBJS=spi.o ad56x8.o encoder.o event.o
-LIBAVR_OBJS+=midi.o lcd.o num_format.o
+LIBAVR_OBJS+=midi.o lcd.o num_format.o menu.ui.o ui.o config.o
 #LIBAVR_OBJS+=demux.o mcp23s1x.o ui.o rgbled.o
 
 CC=avr-gcc

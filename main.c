@@ -142,6 +142,8 @@ main(void)
 	for (i = 0; i < 8; i++)
 		ad56x8_write_update(0, 0x8000);
 
+	/* XXX load saved config */
+
 	for (i = 0; ; i++) {
 		/* XXX sleep? */
 		if (event_dequeue(&ev_type, &ev_v1, &ev_v2, &ev_v3)) {

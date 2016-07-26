@@ -2,39 +2,8 @@
 
 boilerplate "/* Generated from menu.def -- do not edit */"
 boilerplate file "../LICENSE"
-#include "constants.h"
 
-# Remove later XXX
-boilerplate "#define POLY_LAST 1"
-boilerplate "#define POLY_FIRST 2"
-boilerplate "#define POLY_LOWEST 3"
-boilerplate "#define POLY_HIGHEST 4"
-boilerplate "#define POLY_RANDOM 5"
-boilerplate "#define CH_EVENT_NOTE 1"
-boilerplate "#define CH_EVENT_BEND 2"
-boilerplate "#define CH_EVENT_MODWHEEL 3"
-boilerplate "#define CH_EVENT_VELOCITY 4"
-boilerplate "#define CH_EVENT_CHANNEL_TOUCH 5"
-boilerplate "#define MIDI_OMNI 0"
-boilerplate "#define CH_RANGE_FULL 1"
-boilerplate "#define CH_RANGE_HALF 2"
-boilerplate "#define CH_RANGE_FULL_POS 3"
-boilerplate "#define CH_RANGE_HALF_POS 4"
-boilerplate "#define CH_RANGE_FULL_NEG 5"
-boilerplate "#define CH_RANGE_HALF_NEG 6"
-boilerplate "int get_evtype(void);"
-boilerplate "void set_evtype(int t);"
-boilerplate "int get_poly(void);"
-boilerplate "void set_poly(int p);"
-boilerplate "int get_midich(void);"
-boilerplate "void set_midich(int o);"
-boilerplate "int get_output_range(void);"
-boilerplate "void set_output_range(int p);"
-boilerplate "int get_scale(void);"
-boilerplate "void set_scale(int s);"
-boilerplate "int get_offset(void);"
-boilerplate "void set_offset(int o);"
-boilerplate "void set_channel(int c);"
+include "config.h"
 
 menu root {
 	submenu label "EDIT CHANNEL" definition "channel_list"
@@ -80,7 +49,7 @@ menu "channel" {
 	}
 	editable "MIDI CHANNEL" {
 		display "MIDI CH"
-		variable get "get_midich" set "set_midich"
+		variable get "get_midich" set "set_midich" every
 		integer range 1 to 16
 		option define "MIDI_OMNI" label "omni"
 	}
@@ -105,12 +74,12 @@ menu "tuning" {
 	}
 	editable "OFFSET" {
 		display "OFFSET"
-		variable get "get_offset" set "set_offset"
+		variable get "get_offset" set "set_offset" every
 		integer range -32768 to 32767
 	}
 	editable "SCALE" {
 		display "SCALE"
-		variable get "get_scale" set "set_scale"
+		variable get "get_scale" set "set_scale" every
 		integer range -32768 to 32767
 	}
 }
