@@ -19,7 +19,7 @@
  * e.g. gcc -ggdb3 -o /tmp/test_event -D EVENT_LOCAL_DEBUG=1 -Wall event.c
  */
 
-#ifdef EVENT_LOCAL_DEBUG
+#if defined(EVENT_LOCAL_DEBUG) || !defined(__AVR__)
 # define ATOMIC_BLOCK(x) if (1)
 #else
 # include <avr/io.h>
@@ -41,14 +41,17 @@ struct event {
 
 /* Ring buffer */
 static struct event events[EVENT_QUEUE_LEN];
-static unsigned int event_ptr, event_used;
-static unsigned int event_overflow, event_maxdepth;
+static size_t event_ptr;
+static size_t event_used;
+static bool event_overflow;
+static size_t event_maxdepth;
 
 void
 event_setup(void)
 {
 	memset(events, '\0', sizeof(events));
-	event_ptr = event_used = event_overflow = event_maxdepth = 0;
+	event_ptr = event_used = event_maxdepth = 0;
+	event_overflow = false;
 }
 
 void
@@ -57,14 +60,14 @@ event_drain(void)
 	event_setup();
 }
 
-int
+bool
 event_enqueue(uint8_t type, uint8_t v1, uint8_t v2, uint8_t v3, int important)
 {
-	int r = 0;
+	bool r = false;
 
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 		if (event_used >= EVENT_QUEUE_LEN) {
-			event_overflow = 1;
+			event_overflow = true;
 			if (important)
 				event_used--;
 		}
@@ -78,16 +81,17 @@ event_enqueue(uint8_t type, uint8_t v1, uint8_t v2, uint8_t v3, int important)
 			event_used++;
 			if (event_used > event_maxdepth)
 				event_maxdepth = event_used;
-			r = 1;
+			r = true;
 		}
 	}
 	return r;
 }
 
-int
+bool
 event_dequeue(uint8_t *type, uint8_t *v1, uint8_t *v2, uint8_t *v3)
 {
-	int r = 0, o;
+	bool r = false;
+	size_t o;
 
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 		if (event_used > 0) {
@@ -103,16 +107,16 @@ event_dequeue(uint8_t *type, uint8_t *v1, uint8_t *v2, uint8_t *v3)
 			if (v3 != NULL)
 				*v3 = events[o].v[2];
 			event_used--;
-			r = 1;
+			r = true;
 		}
 	}
 	return r;
 }
 
-int
+size_t
 event_nqueued(void)
 {
-	int r;
+	size_t r;
 
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 		r = event_used;
@@ -120,10 +124,10 @@ event_nqueued(void)
 	return r;
 }
 
-int
+size_t
 event_maxqueued(void)
 {
-	int r;
+	size_t r;
 
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 		r = event_maxdepth;
@@ -131,10 +135,10 @@ event_maxqueued(void)
 	return r;
 }
 
-int
+bool
 event_queue_overflowed(void)
 {
-	int r;
+	bool r;
 
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
 		r = event_overflow;
@@ -146,11 +150,11 @@ void
 event_reset_overflowed(void)
 {
 	ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-		event_overflow = 0;
+		event_overflow = false;
 	}
 }
 
-#ifndef EVENT_LOCAL_DEBUG
+#if !defined(EVENT_LOCAL_DEBUG) && defined(__AVR__)
 void
 event_sleep(int sleep_mode, uint8_t *type,
     uint8_t *v1, uint8_t *v2, uint8_t *v3)
@@ -171,13 +175,13 @@ event_sleep(int sleep_mode, uint8_t *type,
 }
 #endif /* EVENT_LOCAL_DEBUG */
 
-#if EVENT_LOCAL_DEBUG
+#ifdef EVENT_LOCAL_DEBUG
 #include <err.h>
 #include <stdio.h>
 int
 main(void)
 {
-	int x;
+	size_t x;
 	uint8_t ev_type, ev_v1, ev_v2, ev_v3;
 
 	event_setup();

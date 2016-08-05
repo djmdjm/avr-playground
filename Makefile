@@ -27,10 +27,16 @@ LIBAVR_OBJS=spi.o ad56x8.o encoder.o event.o
 LIBAVR_OBJS+=midi.o lcd.o num_format.o menu.ui.o ui.o config.o
 #LIBAVR_OBJS+=demux.o mcp23s1x.o ui.o rgbled.o
 
+HOST_CC=clang-3.6
+HOST_CFLAGS=--std=c99 -Weverything -g -Wno-unused-parameter -Werror
+
 CC=avr-gcc
 OBJCOPY=avr-objcopy
 
-all: firmware.hex
+all: firmware.hex fakeui
+
+fakeui: fakeui.c fakelcd.c event.c
+	${HOST_CC} ${HOST_CFLAGS} -o $@ fakeui.c fakelcd.c event.c -lncurses
 
 firmware.elf: main.o ${LIBAVR_OBJS}
 	${CC} ${CFLAGS} -o $@ main.o ${LIBAVR_OBJS}
