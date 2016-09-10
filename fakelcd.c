@@ -26,34 +26,11 @@
 
 #include "lcd.h"
 
-static void
-sighand(int unused)
-{
-	endwin();
-}
-
-static void
-exithand(void)
-{
-	endwin();
-}
-
 void
 lcd_setup(void)
 {
-	static int called = 0;
-
-	if (called)
-		return;
-	called = 1;
-	initscr();
-	raw();
-	noecho();
-	keypad(stdscr, TRUE);
+	/* Assumes ncurses already started */
 	lcd_clear();
-	atexit(exithand);
-	signal(SIGINT, sighand);
-	signal(SIGTERM, sighand);
 }
 
 void
