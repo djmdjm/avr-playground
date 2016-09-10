@@ -25,7 +25,15 @@
 #include <signal.h>
 #include <ncurses.h>
 
+#include "event.h"
+#include "event-types.h"
 #include "lcd.h"
+#include "num_format.h"
+
+/* We need this for scroll wheel */
+#if !defined(NCURSES_MOUSE_VERSION) || NCURSES_MOUSE_VERSION < 2
+#error ncurses.h does not support mouse protocol 2
+#endif
 
 static void
 sighand(int unused)
@@ -57,10 +65,43 @@ debug(const char *fmt, ...)
 }
 
 int
+handle_input(void)
+{
+	int ch;
+	MEVENT mevent;
+
+	ch = getch();
+	switch (ch) {
+	case 0x03: /* ^C */
+	case 0x1b: /* ESC */
+	case 'q':
+	case 'Q':
+		return 1;
+	case KEY_MOUSE:
+		/* see below */
+		break;
+	default:
+		return 0;
+	}
+	if (getmouse(&mevent) != OK)
+		return 0;
+
+	/* Mouse wheel click */
+	if (mevent.bstate & BUTTON1_PRESSED)
+		event_enqueue(EV_BUTTON, 0, 1, 0, 0);
+	if (mevent.bstate & BUTTON1_RELEASED)
+		event_enqueue(EV_BUTTON, 0, 0, 0, 0);
+	if (mevent.bstate & BUTTON4_PRESSED)
+		event_enqueue(EV_ENCODER, 1, 0, 0, 0);
+	if (mevent.bstate & BUTTON5_PRESSED)
+		event_enqueue(EV_ENCODER, 0, 0, 0, 0);
+	return 0;
+}
+
+int
 main(int argc, char **argv)
 {
-	int ch, done;
-	MEVENT mevent;
+	uint8_t i, j, ev_type, ev_v1, ev_v2, ev_v3;
 
 	initscr();
 	nocbreak();
@@ -80,81 +121,22 @@ main(int argc, char **argv)
 	lcd_setup();
 	lcd_string("hello!");
 
-	done = 0;
-	while (!done) {
-		ch = getch();
-		switch (ch) {
-		case 0x03: /* ^C */
-		case 0x1b: /* ESC */
-		case 'q':
-		case 'Q':
-			done = 1;
-			continue;
-		case KEY_MOUSE:
-			/* see below */
+	for (;;) {
+		if (handle_input())
 			break;
-		default:
-			debug("Key 0x%02x %c", ch, ch);
-			continue;
-		}
-		if (getmouse(&mevent) != OK)
-			continue;
 
-		/* Mouse wheel click */
-		char buf[20];
-		size_t o;
-
-		o = 0;
-		if (mevent.bstate & BUTTON1_PRESSED) {
-			buf[o++] = 'a';
-			mevent.bstate &= ~(unsigned long)BUTTON1_PRESSED;
+		if (event_dequeue(&ev_type, &ev_v1, &ev_v2, &ev_v3)) {
+			lcd_moveto(0, 0);
+			lcd_string(ntoh(ev_type, 0));
+			lcd_string(" ");
+			lcd_string(ntoh(ev_v1, 0));
+			lcd_string(" ");
+			lcd_string(ntoh(ev_v2, 0));
+			lcd_string(" ");
+			lcd_string(ntoh(ev_v3, 0));
+			lcd_string(" ");
+			lcd_clear_eol();
 		}
-		if (mevent.bstate & BUTTON1_RELEASED) {
-			buf[o++] = 'A';
-			mevent.bstate &= ~(unsigned long)BUTTON1_RELEASED;
-		}
-		if (mevent.bstate & BUTTON2_PRESSED) {
-			buf[o++] = 'b';
-			mevent.bstate &= ~(unsigned long)BUTTON2_PRESSED;
-		}
-		if (mevent.bstate & BUTTON2_RELEASED) {
-			buf[o++] = 'B';
-			mevent.bstate &= ~(unsigned long)BUTTON2_RELEASED;
-		}
-		if (mevent.bstate & BUTTON3_PRESSED) {
-			buf[o++] = 'c';
-			mevent.bstate &= ~(unsigned long)BUTTON3_PRESSED;
-		}
-		if (mevent.bstate & BUTTON3_RELEASED) {
-			buf[o++] = 'C';
-			mevent.bstate &= ~(unsigned long)BUTTON3_RELEASED;
-		}
-		if (mevent.bstate & BUTTON4_PRESSED) {
-			buf[o++] = 'd';
-			mevent.bstate &= ~(unsigned long)BUTTON4_PRESSED;
-		}
-		if (mevent.bstate & BUTTON4_RELEASED) {
-			buf[o++] = 'D';
-			mevent.bstate &= ~(unsigned long)BUTTON4_RELEASED;
-		}
-		if (mevent.bstate & BUTTON5_PRESSED) {
-			buf[o++] = 'e';
-			mevent.bstate &= ~(unsigned long)BUTTON5_PRESSED;
-		}
-		if (mevent.bstate & BUTTON5_RELEASED) {
-			buf[o++] = 'E';
-			mevent.bstate &= ~(unsigned long)BUTTON5_RELEASED;
-		}
-		while (o < sizeof(buf) - 2)
-			buf[o++] = ' ';
-		buf[o] = '\0';
-
-		debug("%s 0x%04lx", buf, mevent.bstate);
-#if 0
-		debug("id: %d xyz: %d %d %d state: 0x%08lx",
-		    mevent.id, mevent.x, mevent.y, mevent.z,
-		    mevent.bstate);
-#endif
 	}
 
 	return 0;
