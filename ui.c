@@ -29,32 +29,40 @@
 #include "event-types.h"
 #include "ui.h"
 
-static int editing = 0;
-static int button_down = 0;
+static bool button_down = 0;
+static bool editing = 0;
 static int position = -1;
 
-int
+bool
 config_edit(uint8_t ev_type, uint8_t ev_v1, uint8_t ev_v2, uint8_t ev_v3)
 {
-	/* UI is only interested in UI events */
+	switch (ev_type) {
+	case EV_ENCODER:
+		/* All encoder events are consumed below */
+		break;
+	case EV_BUTTON:
+		/* Only interested in first button */
+		if (ev_v1 != 0)
+			return false;
+		/* Record button down, but no further action is required */
+		if (ev_v2 == 1) {
+			button_down = true;
+			return true;
+		}
+		/* If button up event and button wasn't down, then ignore */
+		if (!button_down)
+			return true;
+		break;
+	default:
+		/* No other events are interesting here */
+		return false;
+	}
+
 	switch (ev_type) {
 	case EV_ENCODER:
 	case EV_BUTTON:
 		break;
-	default:
-		return 0;
 	}
-
-	switch (ev_type) {
-	case EV_BUTTON:
-		/* Swap editing modes on encoder button up */
-		if (ev_v1 == 0 && ev_v2 == 0)
-			editing = !editing;
-		/* Record state of 2nd button for fast editing */
-		if (ev_v1 == 1)
-			button_down = ev_v2;
-		break;
-	}
-	return 1;
+	return true;
 }
 
