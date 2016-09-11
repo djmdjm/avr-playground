@@ -13,6 +13,8 @@ import (
 //go:generate go tool yacc -o parse.go -p parser parse.y
 
 var templatePath = flag.String("template", "uidata.c.t", "path to template")
+var header = flag.Bool("header", false, "generate and output header file (instead of source)")
+var headerGuard = flag.String("header-guard", "", "preprocessor header guard name, e.g. _MENU_H")
 
 func (m *menu) mergeItems(items []menuItem) error {
 	for _, mi := range items {
@@ -150,7 +152,9 @@ func checkStatements(statements []statement) error {
 }
 
 type Boilerplate struct {
-	Text string
+	Text     string
+	InHeader bool
+	InSource bool
 }
 
 type TemplateEditableItem struct {
@@ -195,6 +199,8 @@ type TemplateMenu struct {
 
 // TemplateUI is the data that is passed to the template to be rendered.
 type TemplateUI struct {
+	Header      bool
+	HeaderGuard string
 	Menus       []TemplateMenu
 	Boilerplate []Boilerplate
 }
@@ -310,6 +316,17 @@ func prepareMenu(menu menu) (tm TemplateMenu, err error) {
 }
 
 func prepareBoilerplate(bp boilerplate) (ret Boilerplate, err error) {
+	var inHeader, inSource bool
+	switch bp.bWhere {
+	case blAll:
+		inHeader = true
+		inSource = true
+	case blHeader:
+		inHeader = true
+	case blSource:
+		inSource = true
+	}
+	ret = Boilerplate{InHeader: inHeader, InSource: inSource}
 	switch bp.bType {
 	case bFile:
 		var contents []byte
@@ -317,15 +334,15 @@ func prepareBoilerplate(bp boilerplate) (ret Boilerplate, err error) {
 		if err != nil {
 			return
 		}
-		ret = Boilerplate{Text: string(contents)}
+		ret.Text = string(contents)
 	case bInclude:
 		if bp.value[0] == '<' {
-			ret = Boilerplate{Text: fmt.Sprintf("#include %v", bp.value)}
+			ret.Text = fmt.Sprintf("#include %v", bp.value)
 		} else {
-			ret = Boilerplate{Text: fmt.Sprintf("#include %q", bp.value)}
+			ret.Text = fmt.Sprintf("#include %q", bp.value)
 		}
 	case bText:
-		ret = Boilerplate{Text: bp.value}
+		ret.Text = bp.value
 	}
 	return
 }
@@ -382,6 +399,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("prepare: %v:%v", flag.Arg(0), err)
 	}
+	td.Header = *header
+	td.HeaderGuard = *headerGuard
 	err = tmpl.Execute(os.Stdout, td)
 	if err != nil {
 		log.Fatalf("render %v:%v", flag.Arg(0), err)

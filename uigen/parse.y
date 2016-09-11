@@ -56,6 +56,7 @@ var keywords = map[string]int{
 	"every":       _EVERY,
 	"file":        _FILE,
 	"get":         _GET,
+	"header":      _HEADER,
 	"index":       _INDEX,
 	"include":     _INCLUDE,
 	"integer":     _INTEGER,
@@ -68,6 +69,7 @@ var keywords = map[string]int{
 	"return":      _RETURN,
 	"root":        _ROOT,
 	"set":         _SET,
+	"source":      _SOURCE,
 	"submenu":     _SUBMENU,
 	"to":          _TO,
 	"variable":    _VARIABLE,
@@ -95,6 +97,7 @@ type location struct {
 	statement		statement
 	statements		[]statement
 	boilerplate		boilerplate
+	boilerplateLocation	boilerplateLocation
 	menu			menu
 	menuItem		menuItem
 	menuItems		[]menuItem
@@ -129,6 +132,7 @@ type location struct {
 %token <loc>		_FILE
 %token <loc>		_GET
 %token <loc>		_INCLUDE
+%token <loc>		_HEADER
 %token <loc>		_INDEX
 %token <loc>		_INTEGER
 %token <loc>		_LABEL
@@ -141,6 +145,7 @@ type location struct {
 %token <loc>		_RETURN
 %token <loc>		_ROOT
 %token <loc>		_SET
+%token <loc>		_SOURCE
 %token <loc>		_SUBMENU
 %token <loc>		_THEN    	// "=>"
 %token <loc>		_TO
@@ -155,6 +160,7 @@ type location struct {
 %type <statement>		statement
 %type <statements>		statements
 %type <boilerplate>		boilerplate
+%type <boilerplateLocation>	boilerplate_location
 %type <menu>			menu
 %type <menuItems>		menu_items
 %type <menuItem>		menu_item ask_item submenu_item editable_item
@@ -199,17 +205,45 @@ statement:
 	}
 
 boilerplate:
-	_INCLUDE _QUOTED
+	_INCLUDE _QUOTED boilerplate_location
 	{
-		$$ = boilerplate{loc: $1, bType: bInclude, value: $<stringv>2}
+		$$ = boilerplate{
+			loc: $1,
+			bType: bInclude,
+			bWhere: $3,
+			value: $<stringv>2,
+		}
 	}
-|	_BOILERPLATE _FILE _QUOTED
+|	_BOILERPLATE boilerplate_location _FILE _QUOTED
 	{
-		$$ = boilerplate{loc: $1, bType: bFile, value: $<stringv>3}
+		$$ = boilerplate{
+			loc: $1,
+			bType: bFile,
+			bWhere: $2,
+			value: $<stringv>4,
+		}
 	}
-|	_BOILERPLATE _QUOTED
+|	_BOILERPLATE boilerplate_location _QUOTED
 	{
-		$$ = boilerplate{loc: $1, bType: bText, value: $<stringv>2}
+		$$ = boilerplate{
+			loc: $1,
+			bType: bText,
+			bWhere: $2,
+			value: $<stringv>3,
+		}
+	}
+
+boilerplate_location:
+	{
+		$$ = blAll
+	}
+|	_HEADER
+	{
+		$$ = blHeader
+	}
+|	_SOURCE
+	{
+		$$ = blSource
 	}
 
 
@@ -437,6 +471,7 @@ type askStatementType int
 type editableStatementType int
 type statementType int
 type boilerplateType int
+type boilerplateLocation int
 
 const (
 	// Types for menuItems.
@@ -465,6 +500,10 @@ const (
 	bText boilerplateType = iota
 	bInclude
 	bFile
+	// Boilerplate locations
+	blAll boilerplateLocation = iota
+	blHeader
+	blSource
 )
 
 type variableInfo struct {
@@ -514,9 +553,10 @@ type menu struct {
 }
 
 type boilerplate struct {
-	loc   location
-	bType boilerplateType
-	value string
+	loc    location
+	bType  boilerplateType
+	bWhere boilerplateLocation
+	value  string
 }
 
 type statement struct {

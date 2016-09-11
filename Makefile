@@ -49,7 +49,13 @@ uigen/uigen:
 menu.ui.c: uigen/uigen menu.def uigen/uidata.c.t
 	uigen/uigen --template=uigen/uidata.c.t menu.def > menu.ui.c
 
-fakeui: ${FAKEUI_SRCS}
+menu.ui.h: uigen/uigen menu.def uigen/uidata.c.t
+	uigen/uigen --template=uigen/uidata.c.t --header --header-guard=_MENU \
+	    menu.def > menu.ui.h
+
+menu.ui.o: menu.ui.c menu.ui.h
+
+fakeui: ${FAKEUI_SRCS} menu.ui.h
 	${HOST_CC} ${HOST_CFLAGS} -o $@ ${FAKEUI_SRCS} ${HOST_LIBS}
 
 firmware.elf: main.o ${LIBAVR_OBJS}
@@ -68,5 +74,5 @@ avrdude: firmware.hex
 	    ${AVRDUDE_EXTRA} -e -U flash:w:firmware.hex
 
 clean:
-	rm -f *.elf *.hex *.o *.core *.hex fakeui
+	rm -f *.elf *.hex *.o *.core *.hex fakeui menu.ui.c menu.ui.h
 	${MAKE} -C uigen clean

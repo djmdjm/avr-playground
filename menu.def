@@ -3,7 +3,8 @@
 boilerplate "/* Generated from menu.def -- do not edit */"
 boilerplate file "LICENSE"
 
-include "config.h"
+include "config.h" source
+include "menu.ui.h" source
 
 menu root {
 	submenu label "EDIT CHANNEL" definition "channel_list"

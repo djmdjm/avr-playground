@@ -21,7 +21,7 @@
  * Pipe a UI event to the configuration editor. Returns true if the event
  * was consumed.
  */
-int config_edit(uint8_t type, uint8_t v1, uint8_t v2, uint8_t v3);
+bool config_edit(uint8_t type, uint8_t v1, uint8_t v2, uint8_t v3);
 
 #endif /* _UI_H */
 
