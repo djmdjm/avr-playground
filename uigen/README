@@ -9,3 +9,4 @@ parse.y in this directory, but the best example is probably menu.def.
 TODO:
 
 - better documentation :)
+- (optional?) context argument to get/set functions?
