@@ -1,0 +1,11 @@
+This is a small program to generate C source file for hierarchical
+menus from a small domain-specific language. Usage:
+
+uigen [--template=/path/uidata.c.t] menu.def > output.c
+
+There's some description of the language itself at the start of
+parse.y in this directory, but the best example is probably menu.def.
+
+TODO:
+
+- better documentation :)
