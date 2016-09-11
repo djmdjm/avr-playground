@@ -237,6 +237,8 @@ func prepareMenu(menu menu) (tm TemplateMenu, err error) {
 				Definition: mi.definition,
 				Name:       makeIdentifier("%v_submenu_range_%v", ident, mi.label),
 				Set:        mi.variableInfo.set,
+				RangeLow: mi.intRange.lo,
+				RangeHi:  mi.intRange.hi,
 			}
 			tmi := TemplateMenuItem{
 				Label: mi.label,

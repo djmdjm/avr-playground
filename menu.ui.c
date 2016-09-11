@@ -202,7 +202,7 @@ struct menu root = {
 struct submenu_range channel_list_0_submenu_range_channel = {
 	"CHANNEL",
 	set_channel,
-	0, 0,
+	1, 8,
 	&channel,
 };
 
