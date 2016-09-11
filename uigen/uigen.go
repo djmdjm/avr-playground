@@ -147,8 +147,47 @@ func checkStatements(statements []statement) error {
 			return fmt.Errorf("%v: menu %q not referenced", menu.loc, name)
 		}
 	}
-	// XXX add cycle detection.
 	return nil
+}
+
+// determineMenuDepth determines the maximum depth of the menu tree. It
+// assumes a valid menu tree and so should not be called before
+// prepareStatements has verified this.
+func determineMenuDepth(statements []statement) int {
+	menus := map[string]*menu{}
+	for i, st := range statements {
+		if st.sType != sMenu {
+			continue
+		}
+		menus[st.menu.name] = &statements[i].menu
+	}
+	type menudepth struct {
+		name  string
+		depth int
+	}
+	// Determine maximum menu depth.
+	maxdepth := 0
+	todo := []menudepth{menudepth{"root", 1}}
+	for {
+		todoNow := todo
+		todo = nil
+		for _, md := range todoNow {
+			if maxdepth < md.depth {
+				maxdepth = md.depth
+			}
+			menu := menus[md.name]
+			for _, mi := range menu.menuItems {
+				if mi.miType != miSubmenu && mi.miType != miSubmenuIntRange {
+					continue
+				}
+				todo = append(todo, menudepth{mi.definition, md.depth + 1})
+			}
+		}
+		if todo == nil {
+			break
+		}
+	}
+	return maxdepth
 }
 
 type Boilerplate struct {
@@ -201,6 +240,7 @@ type TemplateMenu struct {
 type TemplateUI struct {
 	Header      bool
 	HeaderGuard string
+	MenuDepth   int
 	Menus       []TemplateMenu
 	Boilerplate []Boilerplate
 }
@@ -401,6 +441,7 @@ func main() {
 	}
 	td.Header = *header
 	td.HeaderGuard = *headerGuard
+	td.MenuDepth = determineMenuDepth(statements)
 	err = tmpl.Execute(os.Stdout, td)
 	if err != nil {
 		log.Fatalf("render %v:%v", flag.Arg(0), err)

@@ -62,6 +62,7 @@ struct menu {
 	const struct menu *parent;
 };
 
+#define MENU_MAX_DEPTH	{{.MenuDepth}}
 extern const struct menu *menu_root;
 
 {{if $top.HeaderGuard}}#endif /* {{$top.HeaderGuard}} */{{end}}
