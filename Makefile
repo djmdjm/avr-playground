@@ -36,14 +36,21 @@ HOST_CFLAGS=--std=c99 -Wextra -g -Wno-unused-parameter -Werror \
     -I${HOST_NCURSES_PATH}/include -I${HOST_NCURSES_PATH}/include/ncurses
 HOST_LIBS=${HOST_NCURSES_PATH}/lib/libncurses.a
 
+FAKEUI_SRCS=fakeui.c fakelcd.c event.c num_format.c menu.ui.c config.c
+
 CC=avr-gcc
 OBJCOPY=avr-objcopy
 
-all: firmware.hex fakeui
+all: firmware.hex fakeui uigen/uigen
 
-fakeui: fakeui.c fakelcd.c event.c num_format.c
-	${HOST_CC} ${HOST_CFLAGS} -o $@ \
-	    fakeui.c fakelcd.c event.c num_format.c ${HOST_LIBS}
+uigen/uigen:
+	${MAKE} -C uigen
+
+menu.ui.c: uigen/uigen menu.def uigen/uidata.c.t
+	uigen/uigen --template=uigen/uidata.c.t menu.def > menu.ui.c
+
+fakeui: ${FAKEUI_SRCS}
+	${HOST_CC} ${HOST_CFLAGS} -o $@ ${FAKEUI_SRCS} ${HOST_LIBS}
 
 firmware.elf: main.o ${LIBAVR_OBJS}
 	${CC} ${CFLAGS} -o $@ main.o ${LIBAVR_OBJS}
@@ -61,4 +68,5 @@ avrdude: firmware.hex
 	    ${AVRDUDE_EXTRA} -e -U flash:w:firmware.hex
 
 clean:
-	rm -f *.elf *.hex *.o *.core *.hex
+	rm -f *.elf *.hex *.o *.core *.hex fakeui
+	${MAKE} -C uigen clean

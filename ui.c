@@ -36,9 +36,16 @@ static int position = -1;
 int
 config_edit(uint8_t ev_type, uint8_t ev_v1, uint8_t ev_v2, uint8_t ev_v3)
 {
+	/* UI is only interested in UI events */
 	switch (ev_type) {
 	case EV_ENCODER:
+	case EV_BUTTON:
 		break;
+	default:
+		return 0;
+	}
+
+	switch (ev_type) {
 	case EV_BUTTON:
 		/* Swap editing modes on encoder button up */
 		if (ev_v1 == 0 && ev_v2 == 0)
@@ -48,6 +55,6 @@ config_edit(uint8_t ev_type, uint8_t ev_v1, uint8_t ev_v2, uint8_t ev_v3)
 			button_down = ev_v2;
 		break;
 	}
-	return 0;
+	return 1;
 }
 

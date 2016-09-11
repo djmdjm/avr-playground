@@ -1,7 +1,7 @@
 # Menu definitions for MIDI/CV converter
 
 boilerplate "/* Generated from menu.def -- do not edit */"
-boilerplate file "../LICENSE"
+boilerplate file "LICENSE"
 
 include "config.h"
 
