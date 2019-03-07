@@ -1,5 +1,9 @@
+# XXX go get -u golang.org/x/tools/cmd/goyacc
+#goyacc="go tool yacc"
+GOYACC=goyacc
+
 uigen: lex.go uigen.go parse.y
-	go tool yacc parse.y
+	$(GOYACC) parse.y
 	go build
 
 clean:
