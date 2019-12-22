@@ -24,19 +24,22 @@ CFLAGS+=-funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
 CFLAGS+=-g
 
 LIBAVR_OBJS=spi.o ad56x8.o encoder.o event.o
-LIBAVR_OBJS+=midi.o lcd.o num_format.o menu.ui.o ui.o config.o
+LIBAVR_OBJS+=midi.o lcd.o lcd_utils.o num_format.o menu.ui.o ui.o config.o
 #LIBAVR_OBJS+=demux.o mcp23s1x.o ui.o rgbled.o
 
 # we need ncurses built with --enable-ext-mouse to support mouse-wheel.
 # Most distributions don't do this unfortunately.
-HOST_NCURSES_PATH=${HOME}/tmp/ncurses
+#HOST_NCURSES_PATH=${HOME}/tmp/ncurses
+HOST_NCURSES_PATH=./ncurses-6.1
 
-HOST_CC=clang-3.6
-HOST_CFLAGS=--std=c99 -Wextra -g -Wno-unused-parameter -Werror \
-    -I${HOST_NCURSES_PATH}/include -I${HOST_NCURSES_PATH}/include/ncurses
-HOST_LIBS=${HOST_NCURSES_PATH}/lib/libncurses.a
+HOST_CC=cc
+HOST_CFLAGS=--std=c99 -Wextra -g -Wno-unused-parameter -Werror
+HOST_CFLAGS+=-I${HOST_NCURSES_PATH}/include
+HOST_CFLAGS+=-I${HOST_NCURSES_PATH}/include/ncurses
+HOST_LIBS=${HOST_NCURSES_PATH}/lib/libncurses.a ${HOST_NCURSES_PATH}/lib/libtinfo.a
 
-FAKEUI_SRCS=fakeui.c fakelcd.c event.c num_format.c menu.ui.c config.c
+FAKEUI_SRCS=fakeui.c fakelcd.c lcd_utils.c event.c num_format.c
+FAKEUI_SRCS+=menu.ui.c config.c ui.c
 
 CC=avr-gcc
 OBJCOPY=avr-objcopy

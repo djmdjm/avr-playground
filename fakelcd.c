@@ -38,7 +38,8 @@ lcd_display(int display_on, int cursor_on, int blink_on)
 {
 }
 
-void lcd_clear(void)
+void
+lcd_clear(void)
 {
 	move(0, 0);
 	printw("+--------+");
@@ -121,6 +122,20 @@ lcd_string(const char *s)
 }
 
 void
+lcd_chars(const char *s, size_t len)
+{
+	int x;
+
+	lcd_getpos(&x, NULL);
+	if (x >= LCD_COLS)
+		return; /* Shouldn't happen */
+	if ((len + x) >= LCD_COLS)
+		len = LCD_COLS - x;
+	for (; len > 0; len--)
+		lcd_char(*s++);
+}
+
+void
 lcd_char(char c)
 {
 	int x;
@@ -153,4 +168,3 @@ lcd_program_char(int c, uint8_t *data, size_t len)
 {
 	/* XXX */
 }
-

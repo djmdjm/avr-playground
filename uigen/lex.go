@@ -212,6 +212,8 @@ func (st *state) Lex(yy *yySymType) int {
 				c = st.next()
 				if c == '\\' || c == quote {
 					unquoted = append(unquoted, byte(c))
+				} else if c == 'n' {
+					unquoted = append(unquoted, byte('\n'))
 				} else if c == 'x' {
 					// '\xYY' hex-literal character.
 					c = st.hexByte()

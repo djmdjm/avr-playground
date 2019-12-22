@@ -20,7 +20,10 @@
 /* Driver for a HD44870-style 20x2 LCD */
 
 #define LCD_ROWS	4
-#define LCD_COLS	20
+#define LCD_COLS	8
+
+/* Maximum number of words supported for lcd_centered_string() */
+#define LCD_MAX_WORDS	16
 
 /*
  * Pin/port configuration. It's possible to have the control and data signals
@@ -140,5 +143,11 @@ void lcd_fill(char c, size_t n);
  * data must be an 8 byte array containing the row bitmaps of the character.
  */
 void lcd_program_char(int c, uint8_t *data, size_t len);
+
+/* Output a \n-broken string string, trying to centre each line on the screen */
+void lcd_centered_string(const char *s);
+
+/* Centre a string on a single row */
+void lcd_centred_string_row(int row, const char *s);
 
 #endif /* LCD_H */

@@ -19,12 +19,15 @@
 
 /* Registry of event types */
 
+/* NULL event; e.g. for UI refresh */
+#define EV_NULL			0x00
+
 /* Rotary encoder */
-#define EV_ENCODER		0x00 /* v=1 clockwise, v=0 anti-clockwise */
+#define EV_ENCODER		0x01 /* v=1 clockwise, v=0 anti-clockwise */
 /* XXX support numbered encoders */
 
 /* Pushbuttons */
-#define EV_BUTTON		0x01
+#define EV_BUTTON		0x02
 
 /* MIDI events */
 #define EV_MIDI_NOTE_ON		0x10 /* chan, note, velocity */

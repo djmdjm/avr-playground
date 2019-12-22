@@ -76,11 +76,11 @@ extern const struct menu *menu_root;
 {{range .Editables}}
 {{if .Items}}
 static const struct editable_item {{.Name}}_items[] = {
-{{range .Items}}	{ "{{.Label}}", {{.Definition}} },
+{{range .Items}}	{ {{printf "%q" .Label}}, {{.Definition}} },
 {{end}}};{{end}}
 
 static const struct editable {{.Name}} = {
-	"{{.Label}}",
+	{{printf "%q" .Label}},
 	{{.Get}},
 	{{.Set}},
 	{{if .Every}}1{{else}}0{{end}},
@@ -92,7 +92,7 @@ static const struct editable {{.Name}} = {
 {{end}}
 {{range .SubmenuRanges}}
 static const struct submenu_range {{.Name}} = {
-	"{{.Label}}",
+	{{printf "%q" .Label}},
 	{{.Set}},
 	{{.RangeLow}}, {{.RangeHi}},
 	&{{.Definition}},
@@ -104,11 +104,11 @@ static const struct submenu_range {{.Name}} = {
 {{range .Items}}{{if .Action}}void {{.Action}}(void);
 {{end}}{{end}}
 static const struct ask_item {{.Name}}_items[] = {
-{{range .Items}}	{ "{{.Label}}", {{if .Action}}{{.Action}}{{else}}NULL{{end}} },
+{{range .Items}}	{ {{printf "%q" .Label}}, {{if .Action}}{{.Action}}{{else}}NULL{{end}} },
 {{end}}};
 {{end}}
 static const struct ask {{.Name}} = {
-	"{{.Label}}",
+	{{printf "%q" .Label}},
 	{{len .Items}},
 	{{if .Items}}{{.Name}}_items{{else}}NULL{{end}},
 };
@@ -116,7 +116,7 @@ static const struct ask {{.Name}} = {
 
 static const struct menu_item {{.Name}}_items[] = {
 {{range .Items}}	{
-		.label = "{{.Label}}",
+		.label = {{printf "%q" .Label}},
 {{if eq .Type "editable"}}		.mi_type = M_EDITABLE,
 		.item = { .editable = &{{.Name}} },
 {{else if eq .Type "ask"}}		.mi_type = M_ASK,

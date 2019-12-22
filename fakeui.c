@@ -23,12 +23,13 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <signal.h>
-#include <ncurses.h>
+#include <curses.h>
 
 #include "event.h"
 #include "event-types.h"
 #include "lcd.h"
 #include "num_format.h"
+#include "ui.h"
 
 /* We need this for scroll wheel */
 #if !defined(NCURSES_MOUSE_VERSION) || NCURSES_MOUSE_VERSION < 2
@@ -77,6 +78,14 @@ handle_input(void)
 	case 'q':
 	case 'Q':
 		return 1;
+	case KEY_UP:
+	case KEY_LEFT:
+		event_enqueue(EV_ENCODER, 1, 0, 0, 0);
+		return 0;
+	case KEY_DOWN:
+	case KEY_RIGHT:
+		event_enqueue(EV_ENCODER, 0, 0, 0, 0);
+		return 0;
 	case KEY_MOUSE:
 		/* see below */
 		break;
@@ -91,6 +100,8 @@ handle_input(void)
 		event_enqueue(EV_BUTTON, 0, 1, 0, 0);
 	if (mevent.bstate & BUTTON1_RELEASED)
 		event_enqueue(EV_BUTTON, 0, 0, 0, 0);
+
+	/* Mouse wheel */
 	if (mevent.bstate & BUTTON4_PRESSED)
 		event_enqueue(EV_ENCODER, 1, 0, 0, 0);
 	if (mevent.bstate & BUTTON5_PRESSED)
@@ -119,24 +130,19 @@ main(int argc, char **argv)
 	printw("Mouse wheel simulates encoder. Press 'q' to exit");
 
 	lcd_setup();
-	lcd_string("hello!");
+	lcd_centered_string("hello\nthere!");
+	sleep(5);
+
+	/* init editor display */
+	config_edit(EV_NULL, 0, 0, 0);
 
 	for (;;) {
 		if (handle_input())
 			break;
-
-		if (event_dequeue(&ev_type, &ev_v1, &ev_v2, &ev_v3)) {
-			lcd_moveto(0, 0);
-			lcd_string(ntoh(ev_type, 0));
-			lcd_string(" ");
-			lcd_string(ntoh(ev_v1, 0));
-			lcd_string(" ");
-			lcd_string(ntoh(ev_v2, 0));
-			lcd_string(" ");
-			lcd_string(ntoh(ev_v3, 0));
-			lcd_string(" ");
-			lcd_clear_eol();
-		}
+		if (!event_dequeue(&ev_type, &ev_v1, &ev_v2, &ev_v3))
+			continue;
+		if (config_edit(ev_type, ev_v1, ev_v2, ev_v3))
+			continue;
 	}
 
 	return 0;

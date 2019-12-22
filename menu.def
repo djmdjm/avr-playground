@@ -7,8 +7,8 @@ include "config.h" source
 include "menu.ui.h" source
 
 menu root {
-	submenu label "EDIT CHANNEL" definition "channel_list"
-	editable "POLY MODE" {
+	submenu label "EDIT\nCHANNEL" definition "channel_list"
+	editable "POLY\nMODE" {
 		display "MODE"
 		variable get "get_poly" set "set_poly"
 		option define "POLY_LAST" label "last"
@@ -39,7 +39,7 @@ menu "channel_list" {
 }
 
 menu "channel" {
-	editable "MIDI EVENT" {
+	editable "MIDI\nEVENT" {
 		display "EV. TYPE"
 		variable get "get_evtype" set "set_evtype"
 		option define "CH_EVENT_NOTE" label "note"
@@ -48,13 +48,13 @@ menu "channel" {
 		option define "CH_EVENT_VELOCITY" label "velocity"
 		option define "CH_EVENT_CHANNEL_TOUCH" label "ch.touch"
 	}
-	editable "MIDI CHANNEL" {
+	editable "MIDI\nCHANNEL" {
 		display "MIDI CH"
 		variable get "get_midich" set "set_midich" every
 		integer range 1 to 16
 		option define "MIDI_OMNI" label "omni"
 	}
-	editable "OUTPUT RANGE" {
+	editable "OUTPUT\nRANGE" {
 		display "RANGE"
 		variable get "get_output_range" set "set_output_range"
 		option define "CH_RANGE_FULL" label "-10>+10"

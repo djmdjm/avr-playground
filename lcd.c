@@ -21,6 +21,9 @@
 /* XXX maintain location pointer to avoid getpos() calls */
 
 #include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+#include <stdbool.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include <util/delay_basic.h>
@@ -406,4 +409,3 @@ lcd_setup(void)
 	/* Display enable, cursor off, blink off */
 	lcd_display(1, 0, 0);
 }
-
