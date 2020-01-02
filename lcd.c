@@ -21,9 +21,6 @@
 /* XXX maintain location pointer to avoid getpos() calls */
 
 #include <stddef.h>
-#include <stdint.h>
-#include <string.h>
-#include <stdbool.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include <util/delay_basic.h>
@@ -219,6 +216,31 @@ lcd_command(int rs, uint8_t val)
 	lcd_write8(rs, val);
 }
 
+static int
+getpos(int *x, int *y)
+{
+	uint8_t i, xx, yy, addr = lcd_waitbusy();
+
+	xx = yy = 0xff;
+	for (i = 0; i < LCD_ROWS; i++) {
+		if (addr >= row_addrs[i] && addr < (row_addrs[i] + LCD_COLS)) {
+			xx = addr - row_addrs[i];
+			yy = i;
+			break;
+		}
+	}
+	if (xx >= LCD_COLS || yy >= LCD_ROWS) {
+		/* wtf? */
+		return 0;
+	} else {
+		if (x != NULL)
+			*x = xx;
+		if (y != NULL)
+			*y = yy;
+		return 1;
+	}
+}
+
 void
 lcd_home(void)
 {
@@ -255,9 +277,10 @@ lcd_clear_eol(void)
 {
 	int x, i;
 
-	lcd_getpos(&x, NULL);
-	for (i = LCD_COLS - x; i > 0; i--)
-		lcd_command(1, ' ');
+	if (getpos(&x, NULL)) {
+		for (i = LCD_COLS - x; i > 0; i--)
+			lcd_command(1, ' ');
+	}
 }
 
 /* Write a string to the LCD without bounds-checking */
@@ -293,25 +316,9 @@ lcd_moveto(int x, int y)
 void
 lcd_getpos(int *x, int *y)
 {
-	uint8_t i, xx, yy, addr = lcd_waitbusy();
-
-	xx = yy = 0xff;
-	for (i = 0; i < LCD_ROWS; i++) {
-		if (addr >= row_addrs[i] && addr < (row_addrs[i] + LCD_COLS)) {
-			xx = addr - row_addrs[i];
-			yy = i;
-			break;
-		}
-	}
-	if (xx >= LCD_COLS || yy >= LCD_ROWS) {
-		/* wtf? */
+	if (!getpos(x, y)) {
 		*x = *y = 0;
 		lcd_error("bad lcd address");
-	} else {
-		if (x != NULL)
-			*x = xx;
-		if (y != NULL)
-			*y = yy;
 	}
 }
 
@@ -379,6 +386,19 @@ lcd_program_char(int c, uint8_t *data, size_t len)
 }
 
 void
+lcd_brightness(int level)
+{
+	if (level < 0)
+		level = 0;
+	else if (level > 3)
+		level = 3;
+
+	/* Brightness has to follow function-set */
+	lcd_command(0, LCD_C_FUNC_SET | LCD_O_FUNC_4BIT);
+	lcd_command(1, 3 - level);
+}
+
+void
 lcd_setup(void)
 {
 	LCD_CTL_DDR |= LCD_CTL_MASK;
@@ -395,11 +415,14 @@ lcd_setup(void)
 	_delay_ms(1);
 	lcd_write4(0, 0x3);
 	_delay_ms(1);
+	lcd_command(0, LCD_C_FUNC_SET | LCD_O_FUNC_4BIT);
+	_delay_ms(10);
 	/* Display is now in 4-bit mode */
 
 	/* Two-line, 5x8 font */
 	lcd_command(0, LCD_C_FUNC_SET | LCD_O_FUNC_4BIT | LCD_O_FUNC_2LINES |
 	    LCD_O_FUNC_FONT_5X8);
+
 	/* Display off */
 	lcd_display(0, 0, 0);
 	lcd_clear();
